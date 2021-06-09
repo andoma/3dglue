@@ -20,4 +20,7 @@ struct Object {
 std::shared_ptr<Object> makeCheckerBoard(float tilesize,
                                          int num_tiles_per_dimention);
 
+
+std::shared_ptr<Object> makeCube();
+
 }
