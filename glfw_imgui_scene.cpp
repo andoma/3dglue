@@ -118,6 +118,9 @@ bool GLFWImguiScene::prepare()
     ImGui::End();
   }
 
+  for(auto &o : m_objects) {
+    o->prepare();
+  }
 
   return true;
 }
@@ -126,7 +129,6 @@ bool GLFWImguiScene::prepare()
 
 void GLFWImguiScene::draw()
 {
-
   ImGui::Render();
 
   int display_w, display_h;

@@ -69,16 +69,12 @@ struct CheckerBoard : public Object {
     s_shader->setMat4("PV", PV);
     s_shader->setInt("widthshift", m_width_shift);
     s_shader->setFloat("scale", m_tilesize);
-    s_shader->setMat4("model", m_model);
+    s_shader->setMat4("model", m_model_matrix);
     s_shader->setVec4("col", m_color);
 
     glDrawArrays(GL_QUADS, 0, 8 << (2 * m_width_shift));
   }
 
-  void setModelMatrix(const glm::mat4 &M) override
-  {
-    m_model = M;
-  }
 
   void setColor(const glm::vec4 &c) override
   {
@@ -88,7 +84,6 @@ struct CheckerBoard : public Object {
   const float m_tilesize;
   const int m_width_shift;
 
-  glm::mat4 m_model{1};
   glm::vec4 m_color{1};
 };
 

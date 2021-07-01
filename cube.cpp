@@ -76,15 +76,9 @@ struct Cube : public Object {
   {
     s_shader->use();
     s_shader->setMat4("PV", PV);
-    s_shader->setMat4("model", m_model);
+    s_shader->setMat4("model", m_model_matrix);
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
-
-  void setModelMatrix(const glm::mat4 &M) override
-  {
-    m_model = M;
-  }
-  glm::mat4 m_model{1};
 };
 
 
