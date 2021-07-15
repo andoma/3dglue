@@ -120,7 +120,9 @@ bool GLFWImguiScene::prepare()
   }
 
   for(auto &o : m_objects) {
+    ImGui::PushID((void *)o.get());
     o->prepare();
+    ImGui::PopID();
   }
 
   return true;
