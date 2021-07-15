@@ -22,7 +22,9 @@ struct Scene {
 
   std::vector<std::shared_ptr<Object>> m_objects;
 
-  glm::mat4 m_PV{1};
+  glm::mat4 m_P{1};
+
+  glm::mat4 m_V{1};
 };
 
 

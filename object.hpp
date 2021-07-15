@@ -13,7 +13,7 @@ struct Object {
 
   virtual void prepare() {}
 
-  virtual void draw(const glm::mat4&) = 0;
+  virtual void draw(const glm::mat4 &P, const glm::mat4 &V) = 0;
 
   virtual void setColor(const glm::vec4&) {}
 

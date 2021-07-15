@@ -72,10 +72,10 @@ struct Cube : public Object {
   }
 
 
-  void draw(const glm::mat4 &PV) override
+  void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
     s_shader->use();
-    s_shader->setMat4("PV", PV);
+    s_shader->setMat4("PV", P * V);
     s_shader->setMat4("model", m_model_matrix);
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }

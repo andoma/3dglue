@@ -113,7 +113,8 @@ bool GLFWImguiScene::prepare()
                                    (float)m_width / m_height,
                                    10.0f, -10.0f);
 
-      m_PV = proj * m_camera->compute();
+      m_P = proj;
+      m_V = m_camera->compute();
     }
     ImGui::End();
   }
@@ -138,8 +139,12 @@ void GLFWImguiScene::draw()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
-  for(auto &o : m_objects)
-    o->draw(m_PV);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  for(auto &o : m_objects) {
+    o->draw(m_P, m_V);
+  }
 
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

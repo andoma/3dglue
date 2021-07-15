@@ -63,10 +63,10 @@ struct CheckerBoard : public Object {
   }
 
 
-  void draw(const glm::mat4 &PV) override
+  void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
     s_shader->use();
-    s_shader->setMat4("PV", PV);
+    s_shader->setMat4("PV", P * V);
     s_shader->setInt("widthshift", m_width_shift);
     s_shader->setFloat("scale", m_tilesize);
     s_shader->setMat4("model", m_model_matrix);
