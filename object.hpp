@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -42,5 +43,11 @@ std::shared_ptr<Object> makePointCloud(size_t num_points,
 std::shared_ptr<Object> makeCube();
 
 std::shared_ptr<Object> makeCross();
+
+std::shared_ptr<Object> makeMesh(const std::vector<float> &attributes,
+                                 int flags);
+
+#define MESH_NORMALS            0x1
+#define MESH_PER_VERTEX_COLOR   0x2
 
 }
