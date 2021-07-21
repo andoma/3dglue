@@ -42,6 +42,15 @@ resize_callback(GLFWwindow *window, int width, int height)
   s->m_height = height;
 }
 
+static void
+scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+  GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
+
+  if(s->m_camera != NULL)
+    s->m_camera->scrollInput(xoffset, yoffset);
+}
+
 
 GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
   : m_width(width)
@@ -64,6 +73,7 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
   }
   glfwSetWindowUserPointer(m_window, this);
   glfwSetWindowPos(m_window, 50, 50);
+  glfwSetScrollCallback(m_window, scroll_callback);
 
   glfwSetWindowSizeCallback(m_window, resize_callback);
   glfwMakeContextCurrent(m_window);

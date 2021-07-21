@@ -111,6 +111,17 @@ struct RotCamera : public Camera {
     return view;
   }
 
+  void scrollInput(double x, double y) override {
+    m_distance += y * m_scale * 0.05;
+    m_azimuth += x * 0.25;
+
+    if(m_azimuth <= -M_PI * 2)
+      m_azimuth += M_PI * 2;
+
+    if(m_azimuth >= M_PI * 2)
+      m_azimuth -= M_PI * 2;
+  }
+
   const float m_scale;
   float m_distance;
   float m_height;

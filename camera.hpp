@@ -14,6 +14,8 @@ struct Camera {
 
   virtual void keyInput() {};
 
+  virtual void scrollInput(double x, double y) {};
+
 };
 
 std::shared_ptr<Camera> makeLookat(float scale,
