@@ -65,6 +65,11 @@ struct Shader {
     glUseProgram(m_id);
   }
 
+  bool has_uniform(const char *name) const
+  {
+    return glGetUniformLocation(m_id, name) != -1;
+  }
+
   GLint uniloc(const char *name) const
   {
     GLint r = glGetUniformLocation(m_id, name);
