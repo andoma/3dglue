@@ -9,14 +9,16 @@ struct ArrayBuffer {
   ArrayBuffer(const ArrayBuffer&) =delete;
   ArrayBuffer& operator=(const ArrayBuffer&) =delete;
 
-  ArrayBuffer(const void *ptr, size_t len)
+  ArrayBuffer(const void *ptr, size_t len, GLenum target)
+    : m_target(target)
   {
     glGenBuffers(1, &m_buffer);
     if(ptr != NULL)
       write(ptr, len);
   }
 
-  ArrayBuffer()
+  ArrayBuffer(GLenum target)
+    : m_target(target)
   {
     glGenBuffers(1, &m_buffer);
   }
@@ -29,11 +31,12 @@ struct ArrayBuffer {
 
   void write(const void *ptr, size_t len)
   {
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffer);
-    glBufferData(GL_ARRAY_BUFFER, len, ptr, GL_STATIC_DRAW);
+    glBindBuffer(m_target, m_buffer);
+    glBufferData(m_target, len, ptr, GL_STATIC_DRAW);
   }
 
   GLuint m_buffer;
+  const GLenum m_target;
 
 };
 

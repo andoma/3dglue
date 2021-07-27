@@ -58,7 +58,8 @@ struct Cross : public Object {
 
   ArrayBuffer m_attrib_buf;
   Cross()
-    : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs))
+    : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs),
+                   GL_ARRAY_BUFFER)
   {
     if(!s_shader) {
       s_shader = new Shader(cross_vertex_shader, cross_fragment_shader);

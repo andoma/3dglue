@@ -134,9 +134,10 @@ struct PointCloud : public Object {
   PointCloud(size_t num_points,
              const float *xyz,
              const float *rgb)
-    : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs))
-    , m_xyz(xyz, num_points * sizeof(float) * 3)
-    , m_rgb(rgb, num_points * sizeof(float) * 3)
+    : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs),
+                   GL_ARRAY_BUFFER)
+    , m_xyz(xyz, num_points * sizeof(float) * 3, GL_ARRAY_BUFFER)
+    , m_rgb(rgb, num_points * sizeof(float) * 3, GL_ARRAY_BUFFER)
     , m_colorized(!!rgb)
     , m_num_points(num_points)
   {
