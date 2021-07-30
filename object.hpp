@@ -44,4 +44,8 @@ std::shared_ptr<Object> makeCube();
 
 std::shared_ptr<Object> makeCross();
 
+struct MeshData;
+
+std::shared_ptr<Object> makeMesh(const MeshData &data);
+
 }

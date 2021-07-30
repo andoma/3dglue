@@ -1,8 +1,9 @@
 #include "object.hpp"
 
+
 #include "shader.hpp"
 #include "buffer.hpp"
-#include "mesh.hpp"
+#include "meshdata.hpp"
 
 // =================================================================
 
@@ -88,16 +89,16 @@ namespace g3d {
 
 struct Mesh : public Object {
 
-  Mesh(std::unique_ptr<MeshData> &data)
-    : m_attrib_buf(&data->m_attributes[0],
-                   data->m_attributes.size() * sizeof(float),
+  Mesh(const MeshData &data)
+    : m_attrib_buf(&data.m_attributes[0],
+                   data.m_attributes.size() * sizeof(float),
                    GL_ARRAY_BUFFER)
-    , m_index_buf(&data->m_indicies[0],
-                  data->m_indicies.size() * sizeof(float),
+    , m_index_buf(&data.m_indicies[0],
+                  data.m_indicies.size() * sizeof(float),
                   GL_ELEMENT_ARRAY_BUFFER)
-    , m_normals(data->m_normals)
-    , m_per_vertex_color(data->m_per_vertex_color)
-    , m_elements(data->m_indicies.size())
+    , m_normals(data.m_normals)
+    , m_per_vertex_color(data.m_per_vertex_color)
+    , m_elements(data.m_indicies.size())
   {
     char hdr[4096];
 
@@ -124,7 +125,7 @@ struct Mesh : public Object {
     if(m_per_vertex_color)
       apv += 4;
 
-    m_vertices = data->m_attributes.size() / apv;
+    m_vertices = data.m_attributes.size() / apv;
     m_apv = apv;
   }
 
@@ -211,7 +212,7 @@ struct Mesh : public Object {
 
 
 
-std::shared_ptr<Object> makeMesh(std::unique_ptr<MeshData> &data)
+std::shared_ptr<Object> makeMesh(const MeshData &data)
 {
   return std::make_shared<Mesh>(data);
 }
