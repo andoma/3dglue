@@ -33,6 +33,10 @@ struct MeshData {
     return m_attributes.size() / m_apv;
   }
 
+  size_t num_triangles() const {
+    return m_indicies.size() / 3;
+  }
+
   std::vector<float> m_attributes;
 
   std::vector<uint32_t> m_indicies;
@@ -40,7 +44,7 @@ struct MeshData {
 
   // Reverse mapping point -> triangle
 
-  bool reverse_map();
+  void reverse_index(bool compress = false);
 
   std::vector<uint32_t> m_vertex_info;
   std::vector<uint32_t> m_vertex_to_tri;

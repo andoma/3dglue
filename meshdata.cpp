@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <string.h>
 
 #include "meshdata.hpp"
 
@@ -27,41 +28,88 @@ backref_vertex(uint32_t point, uint32_t ti, MeshData &md)
 }
 
 
-bool MeshData::reverse_map()
+void MeshData::reverse_index(bool compress)
 {
   if(m_indicies.size() % 3)
-    return false;
+    throw std::runtime_error{"Elements not a multiple of 3"};
 
   m_vertex_info.clear();
   m_vertex_info.resize(num_vertices(), 0);
 
+  size_t used_vertices = 0;
   for(size_t i = 0; i < m_indicies.size(); i++) {
-    // We only support a single vertex shared by max 255 triangles
-    if(m_vertex_info[m_indicies[i]] == 255)
-      return false;
-    m_vertex_info[m_indicies[i]]++;
+    // We only support a single vertex sharing 255 triangles
+    // Could be fixed by using 64bit instead
+
+    const uint32_t use = ++m_vertex_info[m_indicies[i]];
+    if(use == 1)
+      used_vertices++;
+    else if(use == 256)
+      throw std::runtime_error{"Vertex shared by more than 255 triangles"};
   }
 
-  uint32_t offset = 0;
-  for(size_t i = 0; i < m_vertex_info.size(); i++) {
-    uint32_t size = m_vertex_info[i];
-    m_vertex_info[i] |= offset << 8;
-    offset += size;
+  if(used_vertices == num_vertices() || !compress) {
+
+    uint32_t offset = 0;
+    for(size_t i = 0; i < m_vertex_info.size(); i++) {
+      uint32_t size = m_vertex_info[i];
+      m_vertex_info[i] |= offset << 8;
+      offset += size;
+    }
+
+    m_vertex_to_tri.clear();
+    m_vertex_to_tri.resize(offset, 3);
+
+    for(size_t i = 0; i < m_indicies.size(); i += 3) {
+      size_t tri = i / 3;
+      backref_vertex(m_indicies[i + 0], (tri << 2) + 0, *this);
+      backref_vertex(m_indicies[i + 1], (tri << 2) + 1, *this);
+      backref_vertex(m_indicies[i + 2], (tri << 2) + 2, *this);
+    }
+
+  } else {
+
+    std::vector<float> new_attributes;
+    new_attributes.resize(used_vertices * m_apv);
+
+    std::vector<uint32_t> new_attribute_location;
+    new_attribute_location.resize(m_attributes.size());
+
+    size_t o = 0;
+    uint32_t offset = 0;
+    int removed = 0;
+    for(size_t i = 0; i < m_vertex_info.size(); i++) {
+      const uint32_t size = m_vertex_info[i];
+      if(size == 0) {
+        removed++;
+        continue;
+      }
+      new_attribute_location[i] = o;
+      memcpy(&new_attributes[o * m_apv],
+             &m_attributes[i * m_apv],
+             sizeof(float) * m_apv);
+
+      m_vertex_info[o] = (offset << 8) | size;
+      offset += size;
+      o++;
+    }
+
+    m_vertex_to_tri.clear();
+    m_vertex_to_tri.resize(offset, 3);
+
+    for(size_t i = 0; i < m_indicies.size(); i += 3) {
+      const size_t tri = i / 3;
+
+      m_indicies[i + 0] = new_attribute_location[m_indicies[i + 0]];
+      m_indicies[i + 1] = new_attribute_location[m_indicies[i + 1]];
+      m_indicies[i + 2] = new_attribute_location[m_indicies[i + 2]];
+
+      backref_vertex(m_indicies[i + 0], (tri << 2) + 0, *this);
+      backref_vertex(m_indicies[i + 1], (tri << 2) + 1, *this);
+      backref_vertex(m_indicies[i + 2], (tri << 2) + 2, *this);
+    }
+    m_attributes = std::move(new_attributes);
   }
-
-
-  m_vertex_to_tri.clear();
-  m_vertex_to_tri.resize(offset, 3);
-
-  for(size_t i = 0; i < m_indicies.size(); i += 3) {
-    size_t tri = i / 3;
-    backref_vertex(m_indicies[i + 0], (tri << 2) + 0, *this);
-    backref_vertex(m_indicies[i + 1], (tri << 2) + 1, *this);
-    backref_vertex(m_indicies[i + 2], (tri << 2) + 2, *this);
-  }
-
-  return true;
-
 }
 
 
@@ -71,7 +119,7 @@ void MeshData::auto_normals()
     return;
 
   if(m_vertex_to_tri.size() == 0)
-    reverse_map();
+    reverse_index(true);
 
   const size_t num_triangles = m_indicies.size() / 3;
 
@@ -143,7 +191,7 @@ scan_triangle(MeshData &md, uint32_t ti, std::vector<int> &ttg, int group)
 void MeshData::group_triangles()
 {
   if(m_vertex_to_tri.size() == 0)
-    reverse_map();
+    reverse_index(true);
 
   const int num_triangles = m_indicies.size() / 3;
 
@@ -174,7 +222,7 @@ void MeshData::group_triangles()
     }
   }
 
-  m_indicies = new_mesh;
+  m_indicies = std::move(new_mesh);
   m_vertex_info.clear();
   m_vertex_to_tri.clear();
 }
