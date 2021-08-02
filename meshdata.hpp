@@ -49,7 +49,7 @@ struct MeshData {
   std::vector<uint32_t> m_vertex_info;
   std::vector<uint32_t> m_vertex_to_tri;
 
-  void auto_normals();
+  void compute_normals();
 
   void group_triangles();
 

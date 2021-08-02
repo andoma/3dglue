@@ -113,7 +113,7 @@ void MeshData::reverse_index(bool compress)
 }
 
 
-void MeshData::auto_normals()
+void MeshData::compute_normals()
 {
   if(!m_normals)
     return;
