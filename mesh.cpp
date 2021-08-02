@@ -170,6 +170,9 @@ struct Mesh : public Object {
       off += 4;
     }
 
+    if(m_backface_culling)
+      glEnable(GL_CULL_FACE);
+
     if(m_wireframe)
       glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 
@@ -181,6 +184,7 @@ struct Mesh : public Object {
     }
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDisable(GL_CULL_FACE);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -192,6 +196,7 @@ struct Mesh : public Object {
     if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Mesh")) {
       ImGui::Checkbox("Visible", &m_visible);
       ImGui::Checkbox("Wireframe", &m_wireframe);
+      ImGui::Checkbox("Backface culling", &m_backface_culling);
     }
     ImGui::End();
   }
@@ -208,6 +213,7 @@ struct Mesh : public Object {
 
   bool m_visible{true};
   bool m_wireframe{false};
+  bool m_backface_culling{true};
 };
 
 
