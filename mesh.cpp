@@ -27,7 +27,8 @@ out vec3 vNormal;
 out vec3 vFragPos;
 #endif
 
-uniform vec3 objectColor;
+uniform float colorize;
+
 out vec3 vColor;
 
 void main()
@@ -39,9 +40,9 @@ void main()
 #endif
 
 #ifdef PER_VERTEX_COLOR
-   vColor = objectColor * aCol.xyz;
+   vColor = mix(vec3(1,1,1), aCol.xyz, colorize);
 #else
-   vColor = objectColor;
+   vColor = vec3(1,1,1);
 #endif
 }
 
@@ -136,7 +137,7 @@ struct Mesh : public Object {
 
     m_shader->use();
 
-    m_shader->setVec3("objectColor", {1, 1, 1});
+    m_shader->setFloat("colorize", m_colorize);
     m_shader->setMat4("PVM", P * V * m_model_matrix);
 
     if(m_shader->has_uniform("M"))
@@ -144,8 +145,8 @@ struct Mesh : public Object {
 
     if(m_shader->has_uniform("lightPos")) {
       m_shader->setVec3("lightPos", {-2000,-2000,2000});
-      m_shader->setVec3("lightColor", {0.7,0.7,0.7});
-      m_shader->setVec3("ambient", {0.25, 0.25, 0.25});
+      m_shader->setVec3("lightColor", glm::vec3{m_lighting});
+      m_shader->setVec3("ambient", glm::vec3{1.0f - m_lighting});
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
@@ -197,6 +198,12 @@ struct Mesh : public Object {
       ImGui::Checkbox("Visible", &m_visible);
       ImGui::Checkbox("Wireframe", &m_wireframe);
       ImGui::Checkbox("Backface culling", &m_backface_culling);
+
+      ImGui::SliderFloat("Color", &m_colorize, 0, 1);
+
+      if(m_normals) {
+        ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
+      }
     }
     ImGui::End();
   }
@@ -210,6 +217,9 @@ struct Mesh : public Object {
   Shader *m_shader;
   int m_apv;
   size_t m_vertices;
+
+  float m_lighting{0.75};
+  float m_colorize{1};
 
   bool m_visible{true};
   bool m_wireframe{false};
