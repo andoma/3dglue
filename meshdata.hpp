@@ -46,16 +46,33 @@ struct MeshData {
 
   void reverse_index(bool compress = false);
 
+  const int VERTEX_INFO_SHIFT = 6; // Max 64 triangles can share a vertex
+
+  const int VERTEX_INFO_MASK = (1 << VERTEX_INFO_SHIFT) - 1;
+
   std::vector<uint32_t> m_vertex_info;
   std::vector<uint32_t> m_vertex_to_tri;
 
+  const size_t vertex_info_offset(int v) {
+    return m_vertex_info[v] >> VERTEX_INFO_SHIFT;
+  }
+
+  const size_t vertex_info_size(int v) {
+    return m_vertex_info[v] & VERTEX_INFO_MASK;
+  }
+
   void compute_normals();
+
+  void compute_normals2();
 
   void group_triangles();
 
-  std::vector<int> m_triangle_group;
+  void clear_reverse();
+
+  void remove_triangles(const glm::vec3 &direction);
+
+  void colorize_from_curvature();
 
 };
-
 
 }
