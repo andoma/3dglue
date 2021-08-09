@@ -63,6 +63,7 @@ in vec3 vNormal;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
 uniform vec3 ambient;
+uniform float normalColorize;
 #endif
 
 
@@ -72,6 +73,9 @@ void main()
   vec3 lightDir = normalize(lightPos - vFragPos);
   vec3 diffuse  = max(dot(vNormal, lightDir), 0.0) * lightColor;
   vec3 result = (ambient + diffuse) * vColor;
+
+  vec3 ncol = vec3(0.5, 0.5, 0.5) * vNormal + vec3(0.5, 0.5, 0.5);
+  result = mix(result, ncol, normalColorize);
 #else
   vec3 result = vColor;
 #endif
@@ -147,6 +151,7 @@ struct Mesh : public Object {
       m_shader->setVec3("lightPos", {-2000,-2000,2000});
       m_shader->setVec3("lightColor", glm::vec3{m_lighting});
       m_shader->setVec3("ambient", glm::vec3{1.0f - m_lighting});
+      m_shader->setFloat("normalColorize", m_normal_colorize);
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
@@ -203,6 +208,7 @@ struct Mesh : public Object {
 
       if(m_normals) {
         ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
+        ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
       }
     }
     ImGui::End();
@@ -220,6 +226,7 @@ struct Mesh : public Object {
 
   float m_lighting{0.75};
   float m_colorize{1};
+  float m_normal_colorize{0};
 
   bool m_visible{true};
   bool m_wireframe{false};
