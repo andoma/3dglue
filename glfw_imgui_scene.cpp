@@ -20,6 +20,7 @@ struct GLFWImguiScene : public Scene {
   int m_width;
   int m_height;
 
+  GLuint m_vao;
 
   float m_fov{45};
 };
@@ -90,6 +91,8 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
   ImGui_ImplGlfw_InitForOpenGL(m_window, true);
   ImGui_ImplOpenGL3_Init();
 
+  glGenVertexArrays(1, &m_vao);
+
 }
 
 
@@ -143,6 +146,8 @@ bool GLFWImguiScene::prepare()
 void GLFWImguiScene::draw()
 {
   ImGui::Render();
+
+  glBindVertexArray(m_vao);
 
   int display_w, display_h;
   glfwGetFramebufferSize(m_window, &display_w, &display_h);
