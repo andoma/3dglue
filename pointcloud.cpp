@@ -216,7 +216,7 @@ struct PointCloud : public Object {
   {
     if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Pointcloud")) {
 
-      ImGui::Text("%d points", m_num_points);
+      ImGui::Text("%zd points", m_num_points);
 
       ImGui::Checkbox("Visible", &m_visible);
 
