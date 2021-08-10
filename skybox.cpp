@@ -26,6 +26,7 @@ uniform mat4 PVinv;
 out vec4 FragColor;
 in vec2 coord;
 uniform vec3 cam;
+uniform float scale;
 
 float checkerboard(vec2 p,float size){
   p *= size;
@@ -47,14 +48,18 @@ void main()
     vec3 ground = vec3(0,0,-1);
     float t = -(dot(ground, cam) + 0) / dot(ground, dir);
 
-    vec3 floorpoint = cam + t * dir;
+    if(t <= 0) {
+      FragColor = vec4(0, 0, 0, 1);
+    } else {
+      vec3 floorpoint = cam + t * dir;
 
-    float fog = max(1 - (t / 30000), 0);
+      float fog = max(1 - (t * scale * 0.05), 0);
 
-    vec3 col = mix(vec3(0,0.6,0), vec3(0,1,0), checkerboard(floorpoint.xy, 0.001));
-    col = mix(vec3(0,0.8,0), col, fog);
+      vec3 col = mix(vec3(0,0.6,0), vec3(0,1,0), checkerboard(floorpoint.xy, scale));
+      col = mix(vec3(0,0.8,0), col, fog);
 
-    FragColor = vec4(col, 1);
+      FragColor = vec4(col, 1);
+    }
   }
 }
 
@@ -80,9 +85,10 @@ struct Skybox : public Object {
 
   ArrayBuffer m_attrib_buf;
 
-  Skybox()
+  Skybox(float checkersize)
     : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs),
                    GL_ARRAY_BUFFER)
+    , m_checkersize(checkersize)
   {
     if(!s_shader) {
       s_shader = new Shader(skybox_vertex_shader, skybox_fragment_shader);
@@ -100,6 +106,7 @@ struct Skybox : public Object {
 
     s_shader->setVec3("cam", glm::inverse(V)[3]);
     s_shader->setMat4("PVinv", glm::inverse(P * V));
+    s_shader->setFloat("scale", 0.5f / m_checkersize);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
@@ -112,18 +119,22 @@ struct Skybox : public Object {
   {
     if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Skybox")) {
       ImGui::Checkbox("Visible", &m_visible);
+      ImGui::SliderFloat("CheckerSize", &m_checkersize, 10, 10000,
+                         "%.1f", ImGuiSliderFlags_Logarithmic);
+
     }
     ImGui::End();
   }
 
   bool m_visible{true};
+  float m_checkersize{1000};
 
 };
 
 
-std::shared_ptr<Object> makeSkybox()
+std::shared_ptr<Object> makeSkybox(float checkersize)
 {
-  return std::make_shared<Skybox>();
+  return std::make_shared<Skybox>(checkersize);
 }
 
 }
