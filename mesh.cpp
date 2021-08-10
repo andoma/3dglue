@@ -19,6 +19,10 @@ layout (location = 1) in vec3 aNor;
 layout (location = 2) in vec4 aCol;
 #endif
 
+#ifdef TEX0
+layout (location = 3) in vec2 uv0;
+#endif
+
 uniform mat4 PVM;
 
 #ifdef LIGHTING
@@ -30,6 +34,10 @@ out vec3 vFragPos;
 uniform float colorize;
 
 out vec3 vColor;
+
+#ifdef TEX0
+out vec2 vUV0;
+#endif
 
 void main()
 {
@@ -44,6 +52,11 @@ void main()
 #else
    vColor = vec3(1,1,1);
 #endif
+
+#ifdef TEX0
+  vUV0 = uv0;
+#endif
+
 }
 
 )glsl";
@@ -66,18 +79,28 @@ uniform vec3 ambient;
 uniform float normalColorize;
 #endif
 
+#ifdef TEX0
+uniform sampler2D tex0;
+in vec2 vUV0;
+#endif
 
 void main()
 {
+  vec3 col = vColor;
+
+#ifdef TEX0
+  col = col * texture(tex0, vUV0).rgb;
+#endif
+
 #ifdef LIGHTING
   vec3 lightDir = normalize(lightPos - vFragPos);
   vec3 diffuse  = max(dot(vNormal, lightDir), 0.0) * lightColor;
-  vec3 result = (ambient + diffuse) * vColor;
+  vec3 result = (ambient + diffuse) * col;
 
   vec3 ncol = vec3(0.5, 0.5, 0.5) * vNormal + vec3(0.5, 0.5, 0.5);
   result = mix(result, ncol, normalColorize);
 #else
-  vec3 result = vColor;
+  vec3 result = col;
 #endif
   FragColor = vec4(result, 1.0);
 }
@@ -104,15 +127,16 @@ struct Mesh : public Object {
     , m_normals(data.m_normals)
     , m_per_vertex_color(data.m_per_vertex_color)
     , m_elements(data.m_indicies.size())
+    , m_tex0(data.m_tex0)
   {
     char hdr[4096];
 
     snprintf(hdr, sizeof(hdr),
              "#version 330 core\n"
-             "%s\n"
-             "%s\n",
-             m_normals ? "#define LIGHTING" : "",
-             m_per_vertex_color ? "#define PER_VERTEX_COLOR" : "");
+             "%s%s%s",
+             m_normals ? "#define LIGHTING\n" : "",
+             m_per_vertex_color ? "#define PER_VERTEX_COLOR\n" : "",
+             m_tex0 ? "#define TEX0\n" : "");
 
     std::string vertex_shader(hdr);
     std::string fragment_shader(hdr);
@@ -129,6 +153,8 @@ struct Mesh : public Object {
       apv += 3;
     if(m_per_vertex_color)
       apv += 4;
+    if(m_tex0)
+      apv += 2;
 
     m_vertices = data.m_attributes.size() / apv;
     m_apv = apv;
@@ -141,11 +167,15 @@ struct Mesh : public Object {
 
     m_shader->use();
 
-    m_shader->setFloat("colorize", m_colorize);
     m_shader->setMat4("PVM", P * V * m_model_matrix);
 
     if(m_shader->has_uniform("M"))
       m_shader->setMat4("M", m_model_matrix);
+
+
+    if(m_per_vertex_color) {
+      m_shader->setFloat("colorize", m_colorize);
+    }
 
     if(m_shader->has_uniform("lightPos")) {
       m_shader->setVec3("lightPos", {-2000,-2000,2000});
@@ -175,6 +205,18 @@ struct Mesh : public Object {
                             (void*)(off * sizeof(float)));
       off += 4;
     }
+
+    if(m_tex0) {
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, m_apv * sizeof(float),
+                            (void*)(off * sizeof(float)));
+      off += 2;
+
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, m_tex0->get());
+      m_shader->setInt("tex0", 0);
+    }
+
 
     if(m_backface_culling)
       glEnable(GL_CULL_FACE);
@@ -231,9 +273,9 @@ struct Mesh : public Object {
   bool m_visible{true};
   bool m_wireframe{false};
   bool m_backface_culling{true};
+
+  std::shared_ptr<Texture2D> m_tex0;
 };
-
-
 
 std::shared_ptr<Object> makeMesh(const MeshData &data)
 {
