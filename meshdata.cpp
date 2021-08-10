@@ -37,9 +37,6 @@ void MeshData::reverse_index(bool compress)
   size_t used_vertices = 0;
   uint32_t max_use = 0;
   for(size_t i = 0; i < m_indicies.size(); i++) {
-    // We only support a single vertex sharing 255 triangles
-    // Could be fixed by using 64bit instead
-
     const uint32_t use = ++m_vertex_info[m_indicies[i]];
     max_use = std::max(use, max_use);
     if(use == 1)
@@ -322,7 +319,8 @@ void MeshData::clear_reverse()
 
 
 
-void MeshData::compute_normals2()
+
+void MeshData::compute_normals3(uint32_t max_distance)
 {
   if(!m_normals)
     return;
@@ -344,54 +342,16 @@ void MeshData::compute_normals2()
     normals.push_back(n);
   }
 
+  std::vector<std::pair<uint32_t, uint32_t>> triangles;
+
   for(size_t i = 0; i < num_vertices(); i++) {
-    const int offset = vertex_info_offset(i);
-    const int size = vertex_info_size(i);
 
-    std::unordered_set<uint32_t> local_mesh;
-
-    for(int j = 0; j < size; j++) {
-      uint32_t ti = m_vertex_to_tri[offset + j] >> 2;
-      if(local_mesh.find(ti) != local_mesh.end())
-        continue;
-      local_mesh.insert(ti);
-
-      for(int k = 0; k < 3; k++) {
-        uint32_t i2 = m_indicies[3 * ti + k];
-        if(i2 == i)
-          continue;
-
-        const int offset = vertex_info_offset(i2);
-        const int size = vertex_info_size(i2);
-
-        for(int l = 0; l < size; l++) {
-          uint32_t ti = m_vertex_to_tri[offset + l] >> 2;
-          local_mesh.insert(ti);
-          if(local_mesh.find(ti) != local_mesh.end())
-            continue;
-
-          for(int m = 0; m < 3; m++) {
-            uint32_t i3 = m_indicies[3 * ti + m];
-            if(i3 == i2 || i3 == i)
-              continue;
-
-            const int offset = vertex_info_offset(i3);
-            const int size = vertex_info_size(i3);
-
-            for(int n = 0; n < size; n++) {
-              uint32_t ti = m_vertex_to_tri[offset + n] >> 2;
-              local_mesh.insert(ti);
-            }
-          }
-        }
-      }
-    }
-
+    find_neighbour_triangles_from_vertex(i, max_distance, triangles);
 
     glm::vec3 n{0,0,0};
 
-    for(auto ti : local_mesh) {
-      n += normals[ti];
+    for(auto ti : triangles) {
+      n += normals[ti.second];
     }
     n = glm::normalize(n);
 
@@ -402,5 +362,182 @@ void MeshData::compute_normals2()
 }
 
 
+
+void MeshData::find_neighbour_vertices(uint32_t start_vertex,
+                                       uint32_t max_distance,
+                                       std::vector<std::pair<uint32_t, uint32_t>> &output)
+{
+  std::unordered_set<uint32_t> visited;
+
+  if(m_vertex_to_tri.size() == 0)
+    reverse_index(true);
+
+  visited.insert(start_vertex);
+  output.clear();
+  output.push_back(std::make_pair(0, start_vertex));
+
+  for(size_t i = 0; i < output.size(); i++) {
+    const uint32_t distance = output[i].first;
+    if(distance == max_distance)
+      continue;
+
+    const uint32_t vertex = output[i].second;
+    const size_t offset = vertex_info_offset(vertex);
+    const size_t size = vertex_info_size(vertex);
+
+    for(size_t i = 0; i < size; i++) {
+      const uint32_t ti = m_vertex_to_tri[offset + i] >> 2;
+      const uint32_t tix = m_vertex_to_tri[offset + i] & 0x3;
+
+      for(uint32_t j = tix + 1; j < tix + 3; j++) {
+        uint32_t next = m_indicies[3 * ti + (j % 3)];
+        if(visited.find(next) != visited.end())
+          continue;
+        visited.insert(next);
+        output.push_back(std::make_pair(distance + 1, next));
+      }
+    }
+  }
+}
+
+void MeshData::find_neighbour_triangles(uint32_t start_triangle,
+                                        uint32_t max_distance,
+                                        std::vector<std::pair<uint32_t, uint32_t>> &output)
+{
+  std::unordered_set<uint32_t> visited;
+
+  if(m_vertex_to_tri.size() == 0)
+    reverse_index(true);
+
+  visited.insert(start_triangle);
+  output.clear();
+  output.push_back(std::make_pair(0, start_triangle));
+
+  for(size_t i = 0; i < output.size(); i++) {
+    const uint32_t distance = output[i].first;
+    if(distance == max_distance)
+      continue;
+
+    const uint32_t triangle = output[i].second;
+
+    for(size_t j = 0; j < 3; j++) {
+      const uint32_t vertex = m_indicies[3 * triangle + j];
+      const size_t offset = vertex_info_offset(vertex);
+      const size_t size = vertex_info_size(vertex);
+
+      for(size_t i = 0; i < size; i++) {
+        const uint32_t next = m_vertex_to_tri[offset + i] >> 2;
+        if(visited.find(next) != visited.end())
+          continue;
+        visited.insert(next);
+        output.push_back(std::make_pair(distance + 1, next));
+      }
+    }
+  }
+}
+
+void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
+                                                    uint32_t max_distance,
+                                                    std::vector<std::pair<uint32_t, uint32_t>> &output)
+{
+  std::unordered_set<uint32_t> visited;
+
+  if(m_vertex_to_tri.size() == 0)
+    reverse_index(true);
+
+
+  const size_t offset = vertex_info_offset(start_vertex);
+  const size_t size = vertex_info_size(start_vertex);
+
+  output.clear();
+
+  for(size_t i = 0; i < size; i++) {
+    const uint32_t ti = m_vertex_to_tri[offset + i] >> 2;
+    visited.insert(ti);
+    output.push_back(std::make_pair(0, ti));
+  }
+
+  for(size_t i = 0; i < output.size(); i++) {
+    const uint32_t distance = output[i].first;
+    if(distance == max_distance)
+      continue;
+
+    const uint32_t triangle = output[i].second;
+
+    for(size_t j = 0; j < 3; j++) {
+      const uint32_t vertex = m_indicies[3 * triangle + j];
+      const size_t offset = vertex_info_offset(vertex);
+      const size_t size = vertex_info_size(vertex);
+
+      for(size_t i = 0; i < size; i++) {
+        const uint32_t next = m_vertex_to_tri[offset + i] >> 2;
+        if(visited.find(next) != visited.end())
+          continue;
+        visited.insert(next);
+        output.push_back(std::make_pair(distance + 1, next));
+      }
+    }
+  }
+}
+
+std::shared_ptr<MeshData> MeshData::cube(const std::shared_ptr<Texture2D> &tex0)
+{
+  auto md = std::make_shared<MeshData>(true, false, tex0);
+
+  md->m_attributes.resize(8 * md->m_apv);
+
+  float s = 0.5f;
+  md->set_xyz(0, glm::vec3{-s, -s, -s});
+  md->set_xyz(1, glm::vec3{ s, -s, -s});
+  md->set_xyz(2, glm::vec3{ s,  s, -s});
+  md->set_xyz(3, glm::vec3{-s,  s, -s});
+  md->set_xyz(4, glm::vec3{-s, -s,  s});
+  md->set_xyz(5, glm::vec3{ s, -s,  s});
+  md->set_xyz(6, glm::vec3{ s,  s,  s});
+  md->set_xyz(7, glm::vec3{-s,  s,  s});
+
+  md->m_indicies.resize(12 * 3);
+
+  // Front
+  md->set_face(0, 0, 1, 5);
+  md->set_face(1, 0, 5, 4);
+
+  // Left
+  md->set_face(2, 3, 0, 4);
+  md->set_face(3, 3, 4, 7);
+
+  // Right
+  md->set_face(4, 1, 2, 6);
+  md->set_face(5, 1, 6, 5);
+
+  // Back
+  md->set_face(6, 2, 3, 7);
+  md->set_face(7, 2, 7, 6);
+
+  // Top
+  md->set_face(8, 4, 5, 6);
+  md->set_face(9, 4, 6, 7);
+
+  // Bottom
+  md->set_face(10, 3, 2, 1);
+  md->set_face(11, 3, 1, 0);
+
+  md->compute_normals();
+
+  if(tex0) {
+
+    md->set_uv0(0, glm::vec2{0,1});
+    md->set_uv0(1, glm::vec2{1,1});
+    md->set_uv0(4, glm::vec2{0,0});
+    md->set_uv0(5, glm::vec2{1,0});
+
+    md->set_uv0(2, glm::vec2{0,1});
+    md->set_uv0(3, glm::vec2{1,1});
+    md->set_uv0(6, glm::vec2{0,0});
+    md->set_uv0(7, glm::vec2{1,0});
+  }
+
+  return md;
+}
 
 }
