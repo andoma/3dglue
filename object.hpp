@@ -34,14 +34,9 @@ struct Object {
   std::string m_name;
 };
 
-std::shared_ptr<Object> makeCheckerBoard(float tilesize,
-                                         int num_tiles_per_dimention);
-
 std::shared_ptr<Object> makePointCloud(size_t num_points,
                                        const float *xyz,
                                        const float *rgb = NULL);
-
-std::shared_ptr<Object> makeCube();
 
 std::shared_ptr<Object> makeCross();
 
