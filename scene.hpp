@@ -22,6 +22,8 @@ struct Scene {
 
   std::vector<std::shared_ptr<Object>> m_objects;
 
+  std::shared_ptr<Object> m_skybox;
+
   glm::mat4 m_P{1};
 
   glm::mat4 m_V{1};

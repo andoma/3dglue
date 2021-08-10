@@ -49,4 +49,7 @@ struct MeshData;
 
 std::shared_ptr<Object> makeMesh(const MeshData &data);
 
+std::shared_ptr<Object> makeSkybox();
+
+
 }

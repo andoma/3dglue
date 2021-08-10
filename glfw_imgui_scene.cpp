@@ -132,6 +132,13 @@ bool GLFWImguiScene::prepare()
     ImGui::End();
   }
 
+  if(m_skybox != NULL) {
+    ImGui::PushID((void *)m_skybox.get());
+    m_skybox->prepare();
+    ImGui::PopID();
+  }
+
+
   for(auto &o : m_objects) {
     ImGui::PushID((void *)o.get());
     o->prepare();
@@ -154,8 +161,11 @@ void GLFWImguiScene::draw()
   glViewport(0, 0, display_w, display_h);
   glClearColor(0,0,0,0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
 
+  if(m_skybox)
+    m_skybox->draw(m_P, m_V);
+
+  glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
