@@ -1,8 +1,17 @@
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <glm/glm.hpp>
 
 namespace g3d {
+
+
+struct CameraPreset {
+  std::string name;
+  glm::vec3 pos;
+  glm::vec3 lookat;
+};
 
 struct Camera {
 
@@ -23,7 +32,9 @@ std::shared_ptr<Camera> makeLookat(float scale,
                                    bool z_is_up = false);
 
 
+
 std::shared_ptr<Camera> makeRotCamera(float scale,
-                                      glm::vec3 lookat);
+                                      glm::vec3 lookat,
+                                      const std::vector<CameraPreset> &presets = {});
 
 }

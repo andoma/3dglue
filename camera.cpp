@@ -75,11 +75,13 @@ std::shared_ptr<Camera> makeLookat(float scale,
 
 struct RotCamera : public Camera {
 
-  RotCamera(float scale, glm::vec3 lookat)
+  RotCamera(float scale, glm::vec3 lookat,
+            const std::vector<CameraPreset> &presets)
     : m_scale(scale)
     , m_distance(-scale / 2)
     , m_height(0)
     , m_lookat(lookat)
+    , m_presets(presets)
   {}
 
   glm::vec3 lookAt() override
@@ -100,11 +102,36 @@ struct RotCamera : public Camera {
     ImGui::SliderFloat("Y", &m_lookat.y, -m_scale, m_scale);
     ImGui::SliderFloat("Z", &m_lookat.z, -m_scale, m_scale);
 
-    glm::vec3 cameraPos = glm::vec3(m_distance * sin(m_azimuth),
-                                    m_distance * cos(m_azimuth),
-                                    m_height);
 
-    glm::mat4 view = glm::lookAt(cameraPos + m_lookat,
+    if(m_presets.size()) {
+
+      if(ImGui::Button("Goto")) {
+        ImGui::OpenPopup("Goto");
+      }
+
+      if(ImGui::BeginPopup("Goto")) {
+        for(const auto &p : m_presets) {
+          if(ImGui::Button(p.name.c_str())) {
+            ImGui::CloseCurrentPopup();
+
+            auto r = p.pos - p.lookat;
+            m_lookat = p.lookat;
+
+            m_height = r.z;
+            m_azimuth = atan2f(-r.x, -r.y);
+            m_distance = -sqrtf(r.x * r.x + r.y * r.y);
+            break;
+          }
+        }
+        ImGui::EndPopup();
+      }
+    }
+
+    glm::vec3 relativePos = glm::vec3(m_distance * sin(m_azimuth),
+                                      m_distance * cos(m_azimuth),
+                                      m_height);
+
+    glm::mat4 view = glm::lookAt(relativePos + m_lookat,
                                  m_lookat,
                                  glm::vec3{0,0,1});
 
@@ -129,12 +156,15 @@ struct RotCamera : public Camera {
   float m_azimuth{0};
 
   glm::vec3 m_lookat;
+
+  const std::vector<CameraPreset> m_presets;
 };
 
 
-std::shared_ptr<Camera> makeRotCamera(float scale, glm::vec3 lookat)
+std::shared_ptr<Camera> makeRotCamera(float scale, glm::vec3 lookat,
+                                      const std::vector<CameraPreset> &presets)
 {
-  return std::make_shared<RotCamera>(scale, lookat);
+  return std::make_shared<RotCamera>(scale, lookat, presets);
 }
 
 
