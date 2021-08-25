@@ -162,8 +162,8 @@ struct PointCloud : public Object {
       s_pc_shader->setVec3("bbox1", m_bbox_center - m_bbox_size * 0.5f);
       s_pc_shader->setVec3("bbox2", m_bbox_center + m_bbox_size * 0.5f);
     } else {
-      s_pc_shader->setVec3("bbox1", {NAN, NAN, NAN});
-      s_pc_shader->setVec3("bbox2", {NAN, NAN, NAN});
+      s_pc_shader->setVec3("bbox1", glm::vec3{-INFINITY});
+      s_pc_shader->setVec3("bbox2", glm::vec3{ INFINITY});
     }
 
     glPointSize(1); // TODO: Make configurable
