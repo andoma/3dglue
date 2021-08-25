@@ -127,8 +127,10 @@ struct Mesh : public Object {
     , m_normals(data.m_normals)
     , m_per_vertex_color(data.m_per_vertex_color)
     , m_elements(data.m_indicies.size())
+    , m_drawcount(m_elements / 3)
     , m_tex0(data.m_tex0)
   {
+
     char hdr[4096];
 
     snprintf(hdr, sizeof(hdr),
@@ -167,10 +169,12 @@ struct Mesh : public Object {
 
     m_shader->use();
 
-    m_shader->setMat4("PVM", P * V * m_model_matrix);
+    auto m = glm::translate(m_model_matrix, m_translation);
+
+    m_shader->setMat4("PVM", P * V * m);
 
     if(m_shader->has_uniform("M"))
-      m_shader->setMat4("M", m_model_matrix);
+      m_shader->setMat4("M", m);
 
 
     if(m_per_vertex_color) {
@@ -226,7 +230,7 @@ struct Mesh : public Object {
 
     if(m_elements) {
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buf.m_buffer);
-      glDrawElements(GL_TRIANGLES, m_elements, GL_UNSIGNED_INT, NULL);
+      glDrawElements(GL_TRIANGLES, m_drawcount * 3, GL_UNSIGNED_INT, NULL);
     } else {
       glDrawArrays(GL_TRIANGLES, 0, m_vertices);
     }
@@ -252,6 +256,13 @@ struct Mesh : public Object {
         ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
         ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
       }
+      if(m_elements) {
+        ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements / 3);
+      }
+      ImGui::Text("Translation");
+      ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
+      ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
+      ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
     }
     ImGui::End();
   }
@@ -270,11 +281,15 @@ struct Mesh : public Object {
   float m_colorize{1};
   float m_normal_colorize{0};
 
+  int m_drawcount{0};
   bool m_visible{true};
   bool m_wireframe{false};
   bool m_backface_culling{true};
 
   std::shared_ptr<Texture2D> m_tex0;
+
+  glm::vec3 m_translation{0};
+
 };
 
 std::shared_ptr<Object> makeMesh(const MeshData &data)
