@@ -14,6 +14,7 @@ uniform mat4 model;
 uniform vec4 albedo;
 uniform vec3 bbox1;
 uniform vec3 bbox2;
+uniform float alpha;
 
 out vec4 fragmentColor;
 
@@ -24,7 +25,7 @@ void main()
    vec3 s = step(bbox1, pos.xyz) - step(bbox2, pos.xyz);
    float inside = s.x * s.y * s.z;
 
-   fragmentColor = vec4(1,1,1, inside + 0.25) * albedo;
+   fragmentColor = vec4(1,1,1, alpha * (inside + 0.25)) * albedo;
 }
 
 )glsl";
@@ -45,12 +46,8 @@ void main()
 
 
 
-
-
-
-
-
 static const char *bb_vertex_shader = R"glsl(
+
 #version 330 core
 layout (location = 0) in vec3 pos;
 
@@ -159,6 +156,7 @@ struct PointCloud : public Object {
     s_pc_shader->setMat4("PV", P * V);
     s_pc_shader->setMat4("model", m_model_matrix);
     s_pc_shader->setVec4("albedo", m_color);
+    s_pc_shader->setFloat("alpha", m_alpha);
 
     if(m_bb) {
       s_pc_shader->setVec3("bbox1", m_bbox_center - m_bbox_size * 0.5f);
@@ -217,11 +215,9 @@ struct PointCloud : public Object {
     if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Pointcloud")) {
 
       ImGui::Text("%zd points", m_num_points);
-
+      ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
       ImGui::Checkbox("Visible", &m_visible);
-
       ImGui::Checkbox("Rigid Transform", &m_rigid);
-
 
       if(m_rigid) {
         ImGui::Text("Translation");
@@ -267,13 +263,13 @@ struct PointCloud : public Object {
 
   glm::vec3 m_translation{0};
   glm::vec3 m_rotation{0};
-
   glm::vec3 m_bbox_center{0};
   glm::vec3 m_bbox_size{1000};
 
   bool m_visible{true};
   bool m_rigid{false};
   bool m_bb{false};
+  float m_alpha{1};
 };
 
 
