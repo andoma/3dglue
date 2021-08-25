@@ -33,6 +33,8 @@ struct MeshData {
 
   std::shared_ptr<Texture2D> m_tex0{nullptr};
 
+  std::string m_name;
+
   glm::vec3 get_xyz(size_t vertex) const {
 
     return glm::vec3{m_attributes[vertex * m_apv + 0],
@@ -104,7 +106,7 @@ struct MeshData {
 
   void compute_normals();
 
-  void compute_normals3(uint32_t max_distance);
+  void compute_normals(uint32_t max_distance);
 
   void group_triangles();
 

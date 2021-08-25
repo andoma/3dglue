@@ -3,6 +3,8 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
+#include <thread>
+
 #include <string.h>
 
 #include "meshdata.hpp"
@@ -320,13 +322,16 @@ void MeshData::clear_reverse()
 
 
 
-void MeshData::compute_normals3(uint32_t max_distance)
+void MeshData::compute_normals(uint32_t max_distance)
 {
   if(!m_normals)
     return;
 
   if(m_vertex_to_tri.size() == 0)
     reverse_index(true);
+
+  if(num_vertices() < 1)
+    return;
 
   const size_t num_triangles = m_indicies.size() / 3;
 
@@ -342,23 +347,39 @@ void MeshData::compute_normals3(uint32_t max_distance)
     normals.push_back(n);
   }
 
-  std::vector<std::pair<uint32_t, uint32_t>> triangles;
-
-  for(size_t i = 0; i < num_vertices(); i++) {
-
-    find_neighbour_triangles_from_vertex(i, max_distance, triangles);
-
-    glm::vec3 n{0,0,0};
-
-    for(auto ti : triangles) {
-      n += normals[ti.second];
-    }
-    n = glm::normalize(n);
-
-    m_attributes[i * m_apv + 3] = n.x;
-    m_attributes[i * m_apv + 4] = n.y;
-    m_attributes[i * m_apv + 5] = n.z;
+  int p = 8;
+  int per_thread_ranges[p + 1];
+  for(int i = 0; i < p; i++) {
+    per_thread_ranges[i] = num_vertices() * i / p;
   }
+  per_thread_ranges[p] = num_vertices();
+
+  std::vector<std::thread> threads;
+  for(int j = 0; j < p; j++) {
+    threads.push_back(std::thread([=, &normals, &per_thread_ranges] {
+      std::vector<std::pair<uint32_t, uint32_t>> triangles;
+      const size_t start = per_thread_ranges[j];
+      const size_t end = per_thread_ranges[j + 1];
+
+      for(size_t i = start; i < end; i++) {
+
+        find_neighbour_triangles_from_vertex(i, max_distance, triangles);
+
+        glm::vec3 n{0,0,0};
+
+        for(auto ti : triangles) {
+          n += normals[ti.second];
+        }
+        n = glm::normalize(n);
+        m_attributes[i * m_apv + 3] = n.x;
+        m_attributes[i * m_apv + 4] = n.y;
+        m_attributes[i * m_apv + 5] = n.z;
+      }
+                                  }));
+  }
+
+  for(auto &t : threads)
+    t.join();
 }
 
 
