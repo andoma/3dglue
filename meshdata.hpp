@@ -25,6 +25,17 @@ struct MeshData {
     , m_tex0(tex0)
   {}
 
+  MeshData(bool normals, bool per_vertex_color, bool uv)
+    : m_normals(normals)
+    , m_per_vertex_color(per_vertex_color)
+    , m_apv(3 +
+            (normals ? 3 : 0) +
+            (per_vertex_color ? 4 : 0) +
+            (uv ? 2 : 0))
+    , m_rgba_offset(3 + (normals ? 3 : 0))
+    , m_uv0_offset(m_rgba_offset + (per_vertex_color ? 4 : 0))
+  {}
+
   const bool m_normals;
   const bool m_per_vertex_color;
   const int m_apv; // Attributes Per Vertex
