@@ -1,6 +1,7 @@
 #include "texture.hpp"
 
 #include <stdlib.h>
+#include <stdexcept>
 
 #define STB_IMAGE_IMPLEMENTATION
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -13,7 +14,14 @@ namespace g3d {
 
 Texture2D::Texture2D(const char *path)
 {
-  load(path);
+  if(load(path))
+    throw std::runtime_error("Unable to load texture");
+}
+
+Texture2D::Texture2D(const uint8_t *data, size_t len)
+{
+  if(load(data, len))
+    throw std::runtime_error("Unable to load texture");
 }
 
 Texture2D::~Texture2D()
@@ -52,20 +60,37 @@ GLuint Texture2D::get()
 }
 
 
-void Texture2D::load(const char *path)
+int Texture2D::load(const char *path)
 {
   int width;
   int height;
   int channels;
   m_data = stbi_load(path, &width, &height, &channels, 3);
   if(m_data == NULL) {
-    fprintf(stderr, "Failed to load %s\n", path);
-    exit(1);
+    return -1;
   }
 
   m_dirty = true;
   m_width = width;
   m_height = height;
+  return 0;
+}
+
+int Texture2D::load(const uint8_t *data, size_t len)
+{
+  int width;
+  int height;
+  int channels;
+
+  m_data = stbi_load_from_memory(data, len, &width, &height, &channels, 3);
+  if(m_data == NULL) {
+    return -1;
+  }
+
+  m_dirty = true;
+  m_width = width;
+  m_height = height;
+  return 0;
 }
 
 }

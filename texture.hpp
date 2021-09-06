@@ -11,6 +11,8 @@ struct Texture2D {
 
   Texture2D(const char *path);
 
+  Texture2D(const uint8_t *data, size_t len);
+
   Texture2D(void **data, size_t width, size_t height)
     : m_data(*data)
     , m_width(width)
@@ -23,7 +25,9 @@ struct Texture2D {
 
   GLuint get();
 
-  void load(const char *path);
+  int load(const char *path);
+
+  int load(const uint8_t *data, size_t len);
 
   GLuint m_tex{0};
 
