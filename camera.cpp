@@ -76,7 +76,7 @@ std::shared_ptr<Camera> makeLookat(float scale,
 struct RotCamera : public Camera {
 
   RotCamera(float scale, glm::vec3 lookat,
-            const std::vector<CameraPreset> &presets)
+            const std::map<std::string, glm::mat4> &presets)
     : m_scale(scale)
     , m_distance(-scale / 2)
     , m_height(0)
@@ -111,15 +111,9 @@ struct RotCamera : public Camera {
 
       if(ImGui::BeginPopup("Goto")) {
         for(const auto &p : m_presets) {
-          if(ImGui::Button(p.name.c_str())) {
+          if(ImGui::Button(p.first.c_str())) {
             ImGui::CloseCurrentPopup();
-
-            auto r = p.pos - p.lookat;
-            m_lookat = p.lookat;
-
-            m_height = r.z;
-            m_azimuth = atan2f(-r.x, -r.y);
-            m_distance = -sqrtf(r.x * r.x + r.y * r.y);
+            select(p.second);
             break;
           }
         }
@@ -149,6 +143,27 @@ struct RotCamera : public Camera {
       m_azimuth -= M_PI * 2;
   }
 
+  void select(const glm::mat4 &m) {
+
+    auto pos = m[3];
+    auto dir = glm::normalize(m[1]); // Positive Y
+
+    auto lookat = pos + dir * 1000.0f;
+
+    auto r = pos - lookat;
+    m_lookat = lookat;
+    m_height = r.z;
+    m_azimuth = atan2f(-r.x, -r.y);
+    m_distance = -sqrtf(r.x * r.x + r.y * r.y);
+  }
+
+
+  void select(const std::string &preset) override {
+    auto it = m_presets.find(preset);
+    if(it != m_presets.end())
+      select(it->second);
+  }
+
   const float m_scale;
   float m_distance;
   float m_height;
@@ -157,12 +172,14 @@ struct RotCamera : public Camera {
 
   glm::vec3 m_lookat;
 
-  const std::vector<CameraPreset> m_presets;
+
+  const std::map<std::string, glm::mat4> m_presets;
 };
 
 
 std::shared_ptr<Camera> makeRotCamera(float scale, glm::vec3 lookat,
-                                      const std::vector<CameraPreset> &presets)
+                                      const std::map<std::string,
+                                      glm::mat4> &presets)
 {
   return std::make_shared<RotCamera>(scale, lookat, presets);
 }
