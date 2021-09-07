@@ -4,6 +4,7 @@
 #include "shader.hpp"
 #include "buffer.hpp"
 #include "meshdata.hpp"
+#include "texture.hpp"
 
 // =================================================================
 

@@ -5,9 +5,9 @@
 
 #include <glm/glm.hpp>
 
-#include "texture.hpp"
-
 namespace g3d {
+
+struct Texture2D;
 
 struct MeshData {
 
