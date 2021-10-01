@@ -165,9 +165,6 @@ struct Mesh : public Object {
 
   void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
-    if(!m_visible)
-      return;
-
     m_shader->use();
 
     auto m = glm::translate(m_model_matrix, m_translation);
@@ -283,7 +280,6 @@ struct Mesh : public Object {
   float m_normal_colorize{0};
 
   int m_drawcount{0};
-  bool m_visible{true};
   bool m_wireframe{false};
   bool m_backface_culling{true};
 

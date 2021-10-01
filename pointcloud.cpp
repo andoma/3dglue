@@ -149,9 +149,6 @@ struct PointCloud : public Object {
 
   void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
-    if(!m_visible)
-      return;
-
     s_pc_shader->use();
     s_pc_shader->setMat4("PV", P * V);
     s_pc_shader->setMat4("model", m_model_matrix);
@@ -266,7 +263,6 @@ struct PointCloud : public Object {
   glm::vec3 m_bbox_center{0};
   glm::vec3 m_bbox_size{1000};
 
-  bool m_visible{true};
   bool m_rigid{false};
   bool m_bb{false};
   float m_alpha{1};

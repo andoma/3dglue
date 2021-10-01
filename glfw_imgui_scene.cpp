@@ -164,7 +164,7 @@ void GLFWImguiScene::draw()
   glClearColor(0,0,0,0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  if(m_skybox)
+  if(m_skybox && m_skybox->m_visible)
     m_skybox->draw(m_P, m_V);
 
   glEnable(GL_DEPTH_TEST);
@@ -172,7 +172,8 @@ void GLFWImguiScene::draw()
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   for(auto &o : m_objects) {
-    o->draw(m_P, m_V);
+    if(o->m_visible)
+      o->draw(m_P, m_V);
   }
 
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

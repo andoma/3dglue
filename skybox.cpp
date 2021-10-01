@@ -98,9 +98,6 @@ struct Skybox : public Object {
 
   void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
-    if(!m_visible)
-      return;
-
     s_shader->use();
     glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
@@ -126,9 +123,7 @@ struct Skybox : public Object {
     ImGui::End();
   }
 
-  bool m_visible{true};
   float m_checkersize{1000};
-
 };
 
 

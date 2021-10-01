@@ -32,6 +32,9 @@ struct Object {
   glm::mat4 m_model_matrix{1};
 
   std::string m_name;
+
+  bool m_visible{true};
+
 };
 
 std::shared_ptr<Object> makePointCloud(size_t num_points,
