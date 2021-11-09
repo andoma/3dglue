@@ -15,13 +15,13 @@ namespace g3d {
 Texture2D::Texture2D(const char *path)
 {
   if(load(path))
-    throw std::runtime_error("Unable to load texture");
+    throw std::runtime_error(stbi_failure_reason());
 }
 
 Texture2D::Texture2D(const uint8_t *data, size_t len)
 {
   if(load(data, len))
-    throw std::runtime_error("Unable to load texture");
+    throw std::runtime_error(stbi_failure_reason());
 }
 
 Texture2D::~Texture2D()
