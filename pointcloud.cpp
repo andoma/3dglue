@@ -163,7 +163,7 @@ struct PointCloud : public Object {
       s_pc_shader->setVec3("bbox2", glm::vec3{ INFINITY});
     }
 
-    glPointSize(1); // TODO: Make configurable
+    glPointSize(m_pointsize);
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, m_xyz.m_buffer);
@@ -211,7 +211,11 @@ struct PointCloud : public Object {
   {
     if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Pointcloud")) {
 
+      ImGui::Separator();
+      ImGui::PushID("pc");
       ImGui::Text("%zd points", m_num_points);
+      ImGui::SliderFloat("PointSize", &m_pointsize, 1, 5);
+
       ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
       ImGui::Checkbox("Visible", &m_visible);
       ImGui::Checkbox("Rigid Transform", &m_rigid);
@@ -246,6 +250,7 @@ struct PointCloud : public Object {
         ImGui::SliderFloat("Y##s", &m_bbox_size.y, 1, 5000);
         ImGui::SliderFloat("Z##s", &m_bbox_size.z, 1, 5000);
       }
+      ImGui::PopID();
 
     }
     ImGui::End();
@@ -266,6 +271,7 @@ struct PointCloud : public Object {
   bool m_rigid{false};
   bool m_bb{false};
   float m_alpha{1};
+  float m_pointsize{1};
 };
 
 
