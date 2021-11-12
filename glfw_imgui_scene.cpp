@@ -53,6 +53,26 @@ scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 }
 
 
+static void
+key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+  GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
+
+  if(s->m_camera != NULL) {
+    if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
+      int slot = key - GLFW_KEY_F1;
+      if(action == GLFW_PRESS) {
+        if(mods & GLFW_MOD_SHIFT) {
+          s->m_camera->positionStore(slot);
+        } else {
+          s->m_camera->positionRecall(slot);
+        }
+      }
+    }
+  }
+}
+
+
 GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
   : m_width(width)
   , m_height(height)
@@ -77,6 +97,7 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
   glfwSetWindowUserPointer(m_window, this);
   glfwSetWindowPos(m_window, 50, 50);
   glfwSetScrollCallback(m_window, scroll_callback);
+  glfwSetKeyCallback(m_window, key_callback);
 
   glfwSetWindowSizeCallback(m_window, resize_callback);
   glfwMakeContextCurrent(m_window);

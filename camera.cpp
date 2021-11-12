@@ -164,6 +164,26 @@ struct RotCamera : public Camera {
       select(it->second);
   }
 
+  void positionStore(int slot) override {
+    char name[PATH_MAX];
+    snprintf(name, sizeof(name), ".rotcam%d", slot);
+    FILE *fp = fopen(name, "w");
+    fprintf(fp, "%f %f %f %f %f %f\n",
+            m_distance, m_height, m_azimuth,
+            m_lookat.x, m_lookat.y, m_lookat.z);
+    fclose(fp);
+  }
+
+  void positionRecall(int slot) override {
+    char name[PATH_MAX];
+    snprintf(name, sizeof(name), ".rotcam%d", slot);
+    FILE *fp = fopen(name, "r");
+    if(fscanf(fp, "%f %f %f %f %f %f\n",
+              &m_distance, &m_height, &m_azimuth,
+              &m_lookat.x, &m_lookat.y, &m_lookat.z)) {}
+    fclose(fp);
+  }
+
   const float m_scale;
   float m_distance;
   float m_height;
