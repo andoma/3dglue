@@ -29,6 +29,11 @@ struct Lookat : public Camera {
     return m_lookat;
   };
 
+  glm::vec3 camPosition() override
+  {
+    return m_cameraPos;
+  }
+
   glm::mat4 compute() override
   {
     ImGui::Text("Camera Position");
@@ -87,7 +92,12 @@ struct RotCamera : public Camera {
   glm::vec3 lookAt() override
   {
     return m_lookat;
-  };
+  }
+
+  glm::vec3 camPosition() override
+  {
+    return m_campos;
+  }
 
   glm::mat4 compute() override
   {
@@ -125,7 +135,9 @@ struct RotCamera : public Camera {
                                       m_distance * cos(m_azimuth),
                                       m_height);
 
-    glm::mat4 view = glm::lookAt(relativePos + m_lookat,
+    m_campos = relativePos + m_lookat;
+
+    glm::mat4 view = glm::lookAt(m_campos,
                                  m_lookat,
                                  glm::vec3{0,0,1});
 
@@ -178,10 +190,12 @@ struct RotCamera : public Camera {
     char name[PATH_MAX];
     snprintf(name, sizeof(name), ".rotcam%d", slot);
     FILE *fp = fopen(name, "r");
-    if(fscanf(fp, "%f %f %f %f %f %f\n",
-              &m_distance, &m_height, &m_azimuth,
-              &m_lookat.x, &m_lookat.y, &m_lookat.z)) {}
-    fclose(fp);
+    if(fp) {
+      if(fscanf(fp, "%f %f %f %f %f %f\n",
+                &m_distance, &m_height, &m_azimuth,
+                &m_lookat.x, &m_lookat.y, &m_lookat.z)) {}
+      fclose(fp);
+    }
   }
 
   const float m_scale;
@@ -190,6 +204,7 @@ struct RotCamera : public Camera {
 
   float m_azimuth{0};
 
+  glm::vec3 m_campos;
   glm::vec3 m_lookat;
 
 

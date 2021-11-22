@@ -27,6 +27,10 @@ struct Scene {
   glm::mat4 m_P{1};
 
   glm::mat4 m_V{1};
+
+  glm::vec2 m_cursor;
+  glm::vec3 m_cursor_origin;
+  glm::vec3 m_cursor_dir;
 };
 
 

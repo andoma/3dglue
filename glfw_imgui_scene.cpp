@@ -4,6 +4,8 @@
 #include "camera.hpp"
 #include "object.hpp"
 
+#include <glm/gtx/string_cast.hpp>
+
 namespace g3d {
 
 struct GLFWImguiScene : public Scene {
@@ -57,6 +59,19 @@ static void
 key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
   GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
+
+  if(key == GLFW_KEY_F12 && action == GLFW_PRESS) {
+
+    glm::vec3 segment[2] = {s->m_cursor_origin,
+      s->m_cursor_origin + s->m_cursor_dir * 5000.0f};
+
+    printf("%s -> %s\n",
+           glm::to_string(segment[0]).c_str(),
+           glm::to_string(segment[1]).c_str());
+
+    s->m_objects.push_back(makeLine(segment));
+    return;
+  }
 
   if(s->m_camera != NULL) {
     if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
@@ -166,6 +181,43 @@ bool GLFWImguiScene::prepare()
     ImGui::PushID((void *)o.get());
     o->prepare();
     ImGui::PopID();
+  }
+
+  double mouse_x, mouse_y;
+  int display_w, display_h;
+
+  glfwGetCursorPos(m_window, &mouse_x, &mouse_y);
+  glfwGetWindowSize(m_window, &display_w, &display_h);
+
+  m_cursor = (glm::vec2(mouse_x, mouse_y) / glm::vec2(display_w, display_h)) * 2.0f - 1.0f;
+
+  glm::mat4 to_world = glm::inverse(m_P * m_V);
+
+  glm::vec4 toh = to_world * glm::vec4(m_cursor.x, -m_cursor.y, 0, 1.0f);
+
+  auto from = m_camera->camPosition();
+  auto dir = glm::normalize(glm::vec3(toh));
+
+  m_cursor_origin = from;
+  m_cursor_dir = dir;
+
+  if(ImGui::Begin("Cursor")) {
+
+    ImGui::Text("Cursor: % 8.3f % 8.3f",
+                m_cursor.x,
+                m_cursor.y);
+
+    ImGui::Text("From:   % 8.3f % 8.3f % 8.3f",
+                m_cursor_origin.x,
+                m_cursor_origin.y,
+                m_cursor_origin.z);
+
+    ImGui::Text("Dir:    % 8.3f % 8.3f % 8.3f",
+                m_cursor_dir.x,
+                m_cursor_dir.y,
+                m_cursor_dir.z);
+
+    ImGui::End();
   }
 
   return true;
