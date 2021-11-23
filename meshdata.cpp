@@ -3,11 +3,10 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <thread>
-
 #include <string.h>
 
 #include "meshdata.hpp"
+#include "ext/thread-pool/thread_pool.hpp"
 
 #include <glm/gtx/normal.hpp>
 
@@ -319,10 +318,7 @@ void MeshData::clear_reverse()
 }
 
 
-
-
-
-void MeshData::compute_normals(uint32_t max_distance)
+void MeshData::compute_normals(uint32_t max_distance, thread_pool &tp)
 {
   if(!m_normals)
     return;
@@ -347,41 +343,24 @@ void MeshData::compute_normals(uint32_t max_distance)
     normals.push_back(n);
   }
 
-  int p = 8;
-  int per_thread_ranges[p + 1];
-  for(int i = 0; i < p; i++) {
-    per_thread_ranges[i] = num_vertices() * i / p;
-  }
-  per_thread_ranges[p] = num_vertices();
+  tp.parallelize_loop((size_t)0, num_vertices(), [&](const size_t& start, const size_t& end) {
+    std::vector<std::pair<uint32_t, uint32_t>> triangles;
+    for(size_t i = start; i < end; i++) {
 
-  std::vector<std::thread> threads;
-  for(int j = 0; j < p; j++) {
-    threads.push_back(std::thread([=, &normals, &per_thread_ranges] {
-      std::vector<std::pair<uint32_t, uint32_t>> triangles;
-      const size_t start = per_thread_ranges[j];
-      const size_t end = per_thread_ranges[j + 1];
+      find_neighbour_triangles_from_vertex(i, max_distance, triangles);
 
-      for(size_t i = start; i < end; i++) {
+      glm::vec3 n{0,0,0};
 
-        find_neighbour_triangles_from_vertex(i, max_distance, triangles);
-
-        glm::vec3 n{0,0,0};
-
-        for(auto ti : triangles) {
-          n += normals[ti.second];
-        }
-        n = glm::normalize(n);
-        m_attributes[i * m_apv + 3] = n.x;
-        m_attributes[i * m_apv + 4] = n.y;
-        m_attributes[i * m_apv + 5] = n.z;
+      for(auto ti : triangles) {
+        n += normals[ti.second];
       }
-                                  }));
-  }
-
-  for(auto &t : threads)
-    t.join();
+      n = glm::normalize(n);
+      m_attributes[i * m_apv + 3] = n.x;
+      m_attributes[i * m_apv + 4] = n.y;
+      m_attributes[i * m_apv + 5] = n.z;
+    }
+  });
 }
-
 
 
 void MeshData::find_neighbour_vertices(uint32_t start_vertex,

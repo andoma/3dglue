@@ -1,0 +1,3 @@
+[submodule "ext/thread-pool"]
+	path = ext/thread-pool
+	url = https://github.com/SandSnip3r/thread-pool.git

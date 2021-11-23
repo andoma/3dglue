@@ -6,6 +6,8 @@
 
 #include <glm/glm.hpp>
 
+class thread_pool;
+
 namespace g3d {
 
 struct Texture2D;
@@ -118,7 +120,7 @@ struct MeshData {
 
   void compute_normals();
 
-  void compute_normals(uint32_t max_distance);
+  void compute_normals(uint32_t max_distance, thread_pool &tp);
 
   void group_triangles();
 
