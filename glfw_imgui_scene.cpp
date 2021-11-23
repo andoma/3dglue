@@ -4,11 +4,15 @@
 #include "camera.hpp"
 #include "object.hpp"
 
+#include <glm/gtx/string_cast.hpp>
+
 namespace g3d {
 
 struct GLFWImguiScene : public Scene {
 
   GLFWImguiScene(const char *title, int width, int height);
+
+  glm::vec3 cursorDirection() override;
 
   ~GLFWImguiScene();
 
@@ -172,6 +176,18 @@ bool GLFWImguiScene::prepare()
 }
 
 
+glm::vec3 GLFWImguiScene::cursorDirection()
+{
+  double mouse_x, mouse_y;
+  int display_w, display_h;
+
+  glfwGetCursorPos(m_window, &mouse_x, &mouse_y);
+  glfwGetWindowSize(m_window, &display_w, &display_h);
+
+  auto cursor = (glm::vec2(mouse_x, mouse_y) / glm::vec2(display_w, display_h)) * 2.0f - 1.0f;
+  auto ray = glm::inverse(m_P * m_V) * glm::vec4(cursor.x, -cursor.y, 0, 1.0f);
+  return glm::normalize(glm::vec3(ray));
+}
 
 void GLFWImguiScene::draw()
 {

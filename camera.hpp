@@ -15,6 +15,8 @@ struct Camera {
 
   virtual glm::vec3 lookAt() { return glm::vec3{0,0,0}; };
 
+  virtual glm::vec3 camPosition() = 0;
+
   virtual void positionStore(int slot) {};
 
   virtual void positionRecall(int slot) {};

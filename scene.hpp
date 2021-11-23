@@ -27,6 +27,8 @@ struct Scene {
   glm::mat4 m_P{1};
 
   glm::mat4 m_V{1};
+
+  virtual glm::vec3 cursorDirection() = 0;
 };
 
 
