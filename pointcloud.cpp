@@ -7,7 +7,6 @@
 static const char *pc_vertex_shader = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 pos;
-layout (location = 1) in vec3 col;
 
 uniform mat4 PV;
 uniform mat4 model;
@@ -26,6 +25,33 @@ void main()
    float inside = s.x * s.y * s.z;
 
    fragmentColor = vec4(1,1,1, alpha * (inside + 0.25)) * albedo;
+}
+
+)glsl";
+
+
+static const char *pc_vertex_shader_colors = R"glsl(
+#version 330 core
+layout (location = 0) in vec3 pos;
+layout (location = 1) in vec3 col;
+
+uniform mat4 PV;
+uniform mat4 model;
+uniform vec4 albedo;
+uniform vec3 bbox1;
+uniform vec3 bbox2;
+uniform float alpha;
+
+out vec4 fragmentColor;
+
+void main()
+{
+   gl_Position = PV * model * vec4(pos.xyz, 1);
+
+   vec3 s = step(bbox1, pos.xyz) - step(bbox2, pos.xyz);
+   float inside = s.x * s.y * s.z;
+
+   fragmentColor = vec4(col.xyz, alpha * (inside + 0.25));
 }
 
 )glsl";
@@ -124,6 +150,7 @@ namespace g3d {
 struct PointCloud : public Object {
 
   inline static Shader *s_pc_shader;
+  inline static Shader *s_pcc_shader;
   inline static Shader *s_bb_shader;
 
   ArrayBuffer m_attrib_buf;
@@ -142,6 +169,10 @@ struct PointCloud : public Object {
       s_pc_shader = new Shader(pc_vertex_shader, pc_fragment_shader);
     }
 
+    if(!s_pcc_shader) {
+      s_pcc_shader = new Shader(pc_vertex_shader_colors, pc_fragment_shader);
+    }
+
     if(!s_bb_shader) {
       s_bb_shader = new Shader(bb_vertex_shader, bb_fragment_shader);
     }
@@ -149,18 +180,20 @@ struct PointCloud : public Object {
 
   void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
-    s_pc_shader->use();
-    s_pc_shader->setMat4("PV", P * V);
-    s_pc_shader->setMat4("model", m_model_matrix);
-    s_pc_shader->setVec4("albedo", m_color);
-    s_pc_shader->setFloat("alpha", m_alpha);
+    Shader *s = m_colorized ? s_pcc_shader : s_pc_shader;
+    s->use();
+    s->setMat4("PV", P * V);
+    s->setMat4("model", m_model_matrix);
+    if(!m_colorized)
+      s->setVec4("albedo", m_color);
+    s->setFloat("alpha", m_alpha);
 
     if(m_bb) {
-      s_pc_shader->setVec3("bbox1", m_bbox_center - m_bbox_size * 0.5f);
-      s_pc_shader->setVec3("bbox2", m_bbox_center + m_bbox_size * 0.5f);
+      s->setVec3("bbox1", m_bbox_center - m_bbox_size * 0.5f);
+      s->setVec3("bbox2", m_bbox_center + m_bbox_size * 0.5f);
     } else {
-      s_pc_shader->setVec3("bbox1", glm::vec3{-INFINITY});
-      s_pc_shader->setVec3("bbox2", glm::vec3{ INFINITY});
+      s->setVec3("bbox1", glm::vec3{-INFINITY});
+      s->setVec3("bbox2", glm::vec3{ INFINITY});
     }
 
     glPointSize(m_pointsize);
@@ -214,7 +247,7 @@ struct PointCloud : public Object {
       ImGui::Separator();
       ImGui::PushID("pc");
       ImGui::Text("%zd points", m_num_points);
-      ImGui::SliderFloat("PointSize", &m_pointsize, 1, 5);
+      ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);
 
       ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
       ImGui::Checkbox("Visible", &m_visible);
