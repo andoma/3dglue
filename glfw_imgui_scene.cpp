@@ -27,6 +27,8 @@ struct GLFWImguiScene : public Scene {
   GLuint m_vao;
 
   float m_fov{45};
+
+  std::shared_ptr<Object> m_crosshair;
 };
 
 
@@ -120,6 +122,8 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
 
   glGenVertexArrays(1, &m_vao);
 
+  m_crosshair = makeCross();
+  m_objects.push_back(m_crosshair);
 }
 
 
@@ -149,6 +153,8 @@ bool GLFWImguiScene::prepare()
     if(ImGui::Begin("Camera")) {
       ImGui::SliderFloat("FOV", &m_fov, 1, 180);
 
+      ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
+
       auto proj = glm::perspective(glm::radians(m_fov),
                                    (float)m_width / m_height,
                                    10.0f, -10.0f);
@@ -165,6 +171,8 @@ bool GLFWImguiScene::prepare()
     ImGui::PopID();
   }
 
+  m_crosshair->setModelMatrix(glm::scale(glm::translate(glm::mat4{1}, m_camera->lookAt()),
+                                         {100, 100, 100}));
 
   for(auto &o : m_objects) {
     ImGui::PushID((void *)o.get());
