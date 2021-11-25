@@ -480,21 +480,20 @@ void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
   }
 }
 
-std::shared_ptr<MeshData> MeshData::cube(const std::shared_ptr<Texture2D> &tex0)
+std::shared_ptr<MeshData> MeshData::cube(const glm::vec3 &pos, float s, const std::shared_ptr<Texture2D> &tex0)
 {
   auto md = std::make_shared<MeshData>(true, false, tex0);
 
   md->m_attributes.resize(8 * md->m_apv);
 
-  float s = 0.5f;
-  md->set_xyz(0, glm::vec3{-s, -s, -s});
-  md->set_xyz(1, glm::vec3{ s, -s, -s});
-  md->set_xyz(2, glm::vec3{ s,  s, -s});
-  md->set_xyz(3, glm::vec3{-s,  s, -s});
-  md->set_xyz(4, glm::vec3{-s, -s,  s});
-  md->set_xyz(5, glm::vec3{ s, -s,  s});
-  md->set_xyz(6, glm::vec3{ s,  s,  s});
-  md->set_xyz(7, glm::vec3{-s,  s,  s});
+  md->set_xyz(0, pos + glm::vec3{-s, -s, -s});
+  md->set_xyz(1, pos + glm::vec3{ s, -s, -s});
+  md->set_xyz(2, pos + glm::vec3{ s,  s, -s});
+  md->set_xyz(3, pos + glm::vec3{-s,  s, -s});
+  md->set_xyz(4, pos + glm::vec3{-s, -s,  s});
+  md->set_xyz(5, pos + glm::vec3{ s, -s,  s});
+  md->set_xyz(6, pos + glm::vec3{ s,  s,  s});
+  md->set_xyz(7, pos + glm::vec3{-s,  s,  s});
 
   md->m_indicies.resize(12 * 3);
 

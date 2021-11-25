@@ -143,7 +143,7 @@ struct MeshData {
                                             std::vector<std::pair<uint32_t, uint32_t>> &output);
 
 
-  static std::shared_ptr<MeshData> cube(const std::shared_ptr<Texture2D> &tex0 = nullptr);
+  static std::shared_ptr<MeshData> cube(const glm::vec3 &pos, float size, const std::shared_ptr<Texture2D> &tex0 = nullptr);
 
 };
 
