@@ -211,27 +211,6 @@ struct Mesh {
   }
 
 
-  void compute_normals(uint32_t max_distance, thread_pool &tp);
-
-  void group_triangles();
-
-  void remove_triangles(const glm::vec3 &direction);
-
-  void colorize_from_curvature();
-
-  void find_neighbour_vertices(uint32_t start_vertex,
-                               uint32_t max_distance,
-                               std::vector<std::pair<uint32_t, uint32_t>> &output);
-
-  void find_neighbour_triangles(uint32_t start_triangle,
-                                uint32_t max_distance,
-                                std::vector<std::pair<uint32_t, uint32_t>> &output);
-
-  void find_neighbour_triangles_from_vertex(uint32_t start_vertex,
-                                            uint32_t max_distance,
-                                            std::vector<std::pair<uint32_t, uint32_t>> &output);
-
-
   static std::shared_ptr<Mesh> cube(const glm::vec3 &pos, float size, const std::shared_ptr<Texture2D> &tex0 = nullptr);
 
 };
