@@ -164,33 +164,56 @@ struct MeshData {
 
   std::vector<uint32_t> m_indicies;
 
-
-  // Reverse mapping point -> triangle
-
-  void reverse_index(bool compress = false);
-
-  const int VERTEX_INFO_SHIFT = 6; // Max 64 triangles can share a vertex
-
-  const int VERTEX_INFO_MASK = (1 << VERTEX_INFO_SHIFT) - 1;
-
-  std::vector<uint32_t> m_vertex_info;
-  std::vector<uint32_t> m_vertex_to_tri;
-
-  const size_t vertex_info_offset(int v) {
-    return m_vertex_info[v] >> VERTEX_INFO_SHIFT;
-  }
-
-  const size_t vertex_info_size(int v) {
-    return m_vertex_info[v] & VERTEX_INFO_MASK;
-  }
-
   void compute_normals();
+
+  // Inverse mapping point -> triangle
+
+  void inverse_index_update(bool compress = false);
+
+  void inverse_index_clear();
+
+  const int INVERSE_INDEX_OFFSET_SHIFT = 6; // Max 64 triangles can share a vertex
+
+  const int INVERSE_INDEX_COUNT_MASK = (1 << INVERSE_INDEX_OFFSET_SHIFT) - 1;
+
+  /**
+   * This word is split on bit INVERSE_INDEX_OFFSET_SHIFT
+   *
+   *  Currently this means that a vertex can only reference
+   *  (1 << INVERSE_INDEX_OFFSET_SHIFT) number of triangles.
+   *
+   *
+   * + ------------+-------+
+   * | Offset      | Count |
+   * +-------------+-------+
+   *
+   */
+  std::vector<uint32_t> m_inverse_index;
+
+  /**
+   * This word is split with upper 30 bits pointing to triangle
+   * and bottom two the triangle's vertex index (0,1,2)
+   * The value 3 is reserved and used during index construction
+   *
+   * + ------------+-------------+
+   * | Triangle    | 2bit Vertex |
+   * +-------------+-------------+
+   *
+   */
+  std::vector<uint32_t> m_inverse_index_tri;
+
+  const size_t inverse_index_offset(int v) {
+    return m_inverse_index[v] >> INVERSE_INDEX_OFFSET_SHIFT;
+  }
+
+  const size_t inverse_index_count(int v) {
+    return m_inverse_index[v] & INVERSE_INDEX_COUNT_MASK;
+  }
+
 
   void compute_normals(uint32_t max_distance, thread_pool &tp);
 
   void group_triangles();
-
-  void clear_reverse();
 
   void remove_triangles(const glm::vec3 &direction);
 

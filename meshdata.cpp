@@ -15,50 +15,53 @@ namespace g3d {
 static void
 backref_vertex(uint32_t point, uint32_t ti, MeshData &md)
 {
-  const size_t offset = md.vertex_info_offset(point);
-  const size_t size = md.vertex_info_size(point);
+  // Scans the inverse index to find an empty slot (set to magic value 3)
+  // Then write tringle-index there
+  // This shuold never fail (because we precalculate the ranges)
+
+  const size_t offset = md.inverse_index_offset(point);
+  const size_t size = md.inverse_index_count(point);
   for(size_t i = 0; i < size; i++) {
-    if(md.m_vertex_to_tri[offset + i] == 3) {
-      md.m_vertex_to_tri[offset + i] = ti;
+    if(md.m_inverse_index_tri[offset + i] == 3) {
+      md.m_inverse_index_tri[offset + i] = ti;
       return;
     }
   }
   abort();
 }
 
-
-void MeshData::reverse_index(bool compress)
+void MeshData::inverse_index_update(bool compress)
 {
   if(m_indicies.size() % 3)
     throw std::runtime_error{"Elements not a multiple of 3"};
 
-  m_vertex_info.clear();
-  m_vertex_info.resize(num_vertices(), 0);
+  m_inverse_index.clear();
+  m_inverse_index.resize(num_vertices(), 0);
 
   size_t used_vertices = 0;
   uint32_t max_use = 0;
   for(size_t i = 0; i < m_indicies.size(); i++) {
-    const uint32_t use = ++m_vertex_info[m_indicies[i]];
+    const uint32_t use = ++m_inverse_index[m_indicies[i]];
     max_use = std::max(use, max_use);
     if(use == 1)
       used_vertices++;
-    else if((int)use == VERTEX_INFO_MASK + 1)
+    else if((int)use == INVERSE_INDEX_COUNT_MASK + 1)
       throw std::runtime_error{"Vertex shared by too many triangles"};
   }
 
   if(used_vertices == num_vertices() || !compress) {
 
     uint32_t offset = 0;
-    for(size_t i = 0; i < m_vertex_info.size(); i++) {
-      uint32_t size = m_vertex_info[i];
-      if(offset >= (1U << (32 - VERTEX_INFO_SHIFT)))
+    for(size_t i = 0; i < m_inverse_index.size(); i++) {
+      uint32_t size = m_inverse_index[i];
+      if(offset >= (1U << (32 - INVERSE_INDEX_OFFSET_SHIFT)))
         throw std::runtime_error{"Vertex offset too large"};
 
-      m_vertex_info[i] |= offset << VERTEX_INFO_SHIFT;
+      m_inverse_index[i] |= offset << INVERSE_INDEX_OFFSET_SHIFT;
       offset += size;
     }
-    m_vertex_to_tri.clear();
-    m_vertex_to_tri.resize(offset, 3);
+    m_inverse_index_tri.clear();
+    m_inverse_index_tri.resize(offset, 3);
 
     for(size_t i = 0; i < m_indicies.size(); i += 3) {
       size_t tri = i / 3;
@@ -78,8 +81,8 @@ void MeshData::reverse_index(bool compress)
     size_t o = 0;
     uint32_t offset = 0;
     int removed = 0;
-    for(size_t i = 0; i < m_vertex_info.size(); i++) {
-      const uint32_t size = m_vertex_info[i];
+    for(size_t i = 0; i < m_inverse_index.size(); i++) {
+      const uint32_t size = m_inverse_index[i];
       if(size == 0) {
         removed++;
         continue;
@@ -90,16 +93,16 @@ void MeshData::reverse_index(bool compress)
              sizeof(float) * m_apv);
 
 
-      if(offset >= (1U << (32 - VERTEX_INFO_SHIFT)))
+      if(offset >= (1U << (32 - INVERSE_INDEX_OFFSET_SHIFT)))
         throw std::runtime_error{"Vertex offset too large"};
 
-      m_vertex_info[o] = (offset << VERTEX_INFO_SHIFT) | size;
+      m_inverse_index[o] = (offset << INVERSE_INDEX_OFFSET_SHIFT) | size;
       offset += size;
       o++;
     }
 
-    m_vertex_to_tri.clear();
-    m_vertex_to_tri.resize(offset, 3);
+    m_inverse_index_tri.clear();
+    m_inverse_index_tri.resize(offset, 3);
 
     for(size_t i = 0; i < m_indicies.size(); i += 3) {
       const size_t tri = i / 3;
@@ -115,6 +118,57 @@ void MeshData::reverse_index(bool compress)
     m_attributes = std::move(new_attributes);
   }
 }
+
+
+void MeshData::inverse_index_clear()
+{
+  m_inverse_index.clear();
+  m_inverse_index_tri.clear();
+}
+
+
+void MeshData::compute_normals()
+{
+  if(!has_normals())
+    return;
+
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
+
+  const size_t num_triangles = m_indicies.size() / 3;
+
+  std::vector<glm::vec3> normals;
+
+  normals.reserve(num_triangles);
+
+  for(size_t i = 0; i < m_indicies.size(); i+= 3) {
+    auto v0 = get_xyz(m_indicies[i + 0]);
+    auto v1 = get_xyz(m_indicies[i + 1]);
+    auto v2 = get_xyz(m_indicies[i + 2]);
+    auto n = glm::cross(v0 - v1, v0 - v2);
+    normals.push_back(n);
+  }
+
+  for(size_t i = 0; i < num_vertices(); i++) {
+    const int offset = inverse_index_offset(i);
+    const int size = inverse_index_count(i);
+
+    glm::vec3 n{0,0,0};
+    for(int j = 0; j < size; j++) {
+      uint32_t ti = m_inverse_index_tri[offset + j] >> 2;
+      n += normals[ti];
+    }
+
+    n = glm::normalize(n);
+
+    m_attributes[i * m_apv + 3] = n.x;
+    m_attributes[i * m_apv + 4] = n.y;
+    m_attributes[i * m_apv + 5] = n.z;
+  }
+}
+
+
+
 
 
 void MeshData::remove_triangles(const glm::vec3 &direction)
@@ -136,49 +190,9 @@ void MeshData::remove_triangles(const glm::vec3 &direction)
     }
   }
   m_indicies.resize(o);
-  clear_reverse();
+  inverse_index_clear();
 }
 
-
-void MeshData::compute_normals()
-{
-  if(!has_normals())
-    return;
-
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
-
-  const size_t num_triangles = m_indicies.size() / 3;
-
-  std::vector<glm::vec3> normals;
-
-  normals.reserve(num_triangles);
-
-  for(size_t i = 0; i < m_indicies.size(); i+= 3) {
-    auto v0 = get_xyz(m_indicies[i + 0]);
-    auto v1 = get_xyz(m_indicies[i + 1]);
-    auto v2 = get_xyz(m_indicies[i + 2]);
-    auto n = glm::cross(v0 - v1, v0 - v2);
-    normals.push_back(n);
-  }
-
-  for(size_t i = 0; i < num_vertices(); i++) {
-    const int offset = vertex_info_offset(i);
-    const int size = vertex_info_size(i);
-
-    glm::vec3 n{0,0,0};
-    for(int j = 0; j < size; j++) {
-      uint32_t ti = m_vertex_to_tri[offset + j] >> 2;
-      n += normals[ti];
-    }
-
-    n = glm::normalize(n);
-
-    m_attributes[i * m_apv + 3] = n.x;
-    m_attributes[i * m_apv + 4] = n.y;
-    m_attributes[i * m_apv + 5] = n.z;
-  }
-}
 
 
 void MeshData::colorize_from_curvature()
@@ -188,8 +202,8 @@ void MeshData::colorize_from_curvature()
 
   const size_t color_offset = m_rgba_offset;
 
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
 
   const size_t num_triangles = m_indicies.size() / 3;
 
@@ -207,22 +221,22 @@ void MeshData::colorize_from_curvature()
   }
 
   for(size_t i = 0; i < num_vertices(); i++) {
-    const int offset = vertex_info_offset(i);
-    const int size = vertex_info_size(i);
+    const int offset = inverse_index_offset(i);
+    const int size = inverse_index_count(i);
 
-    uint32_t ti = m_vertex_to_tri[offset + 0] >> 2;
+    uint32_t ti = m_inverse_index_tri[offset + 0] >> 2;
     auto n0 = normals[ti];
 
     float s = 0;
     for(int j = 1; j < size; j++) {
-      uint32_t ti = m_vertex_to_tri[offset + j] >> 2;
+      uint32_t ti = m_inverse_index_tri[offset + j] >> 2;
       auto n = normals[ti];
       s += 1.0f - glm::dot(n, n0);
     }
 #if 0
     if(s > 0.5) {
       for(int j = 0; j < size; j++) {
-        uint32_t ti = m_vertex_to_tri[offset + j] >> 2;
+        uint32_t ti = m_inverse_index_tri[offset + j] >> 2;
         m_indicies[3 * ti + 0] = 0;
         m_indicies[3 * ti + 1] = 0;
         m_indicies[3 * ti + 2] = 0;
@@ -254,11 +268,11 @@ scan_triangle(MeshData &md, uint32_t ti, std::vector<int> &ttg, int group)
     std::unordered_map<int, int> neighbours;
     for(int p = 0; p < 3; p++) {
       uint32_t vertex = md.m_indicies[ti * 3 + p];
-      const size_t offset = md.vertex_info_offset(vertex);
-      const size_t size = md.vertex_info_size(vertex);
+      const size_t offset = md.inverse_index_offset(vertex);
+      const size_t size = md.inverse_index_count(vertex);
 
       for(size_t i = 0; i < size; i++) {
-        uint32_t n = md.m_vertex_to_tri[offset + i] >> 2;
+        uint32_t n = md.m_inverse_index_tri[offset + i] >> 2;
         if(n == ti || ttg[n] != 0)
           continue;
         if(++neighbours[n] == 2) {
@@ -274,8 +288,8 @@ scan_triangle(MeshData &md, uint32_t ti, std::vector<int> &ttg, int group)
 
 void MeshData::group_triangles()
 {
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
 
   const int num_triangles = m_indicies.size() / 3;
 
@@ -307,15 +321,9 @@ void MeshData::group_triangles()
   }
 
   m_indicies = std::move(new_mesh);
-  clear_reverse();
+  inverse_index_update();
 }
 
-
-void MeshData::clear_reverse()
-{
-  m_vertex_info.clear();
-  m_vertex_to_tri.clear();
-}
 
 
 void MeshData::compute_normals(uint32_t max_distance, thread_pool &tp)
@@ -323,8 +331,8 @@ void MeshData::compute_normals(uint32_t max_distance, thread_pool &tp)
   if(!has_normals())
     return;
 
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
 
   if(num_vertices() < 1)
     return;
@@ -369,8 +377,8 @@ void MeshData::find_neighbour_vertices(uint32_t start_vertex,
 {
   std::unordered_set<uint32_t> visited;
 
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
 
   visited.insert(start_vertex);
   output.clear();
@@ -382,12 +390,12 @@ void MeshData::find_neighbour_vertices(uint32_t start_vertex,
       continue;
 
     const uint32_t vertex = output[i].second;
-    const size_t offset = vertex_info_offset(vertex);
-    const size_t size = vertex_info_size(vertex);
+    const size_t offset = inverse_index_offset(vertex);
+    const size_t size = inverse_index_count(vertex);
 
     for(size_t i = 0; i < size; i++) {
-      const uint32_t ti = m_vertex_to_tri[offset + i] >> 2;
-      const uint32_t tix = m_vertex_to_tri[offset + i] & 0x3;
+      const uint32_t ti = m_inverse_index_tri[offset + i] >> 2;
+      const uint32_t tix = m_inverse_index_tri[offset + i] & 0x3;
 
       for(uint32_t j = tix + 1; j < tix + 3; j++) {
         uint32_t next = m_indicies[3 * ti + (j % 3)];
@@ -406,8 +414,8 @@ void MeshData::find_neighbour_triangles(uint32_t start_triangle,
 {
   std::unordered_set<uint32_t> visited;
 
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
 
   visited.insert(start_triangle);
   output.clear();
@@ -422,11 +430,11 @@ void MeshData::find_neighbour_triangles(uint32_t start_triangle,
 
     for(size_t j = 0; j < 3; j++) {
       const uint32_t vertex = m_indicies[3 * triangle + j];
-      const size_t offset = vertex_info_offset(vertex);
-      const size_t size = vertex_info_size(vertex);
+      const size_t offset = inverse_index_offset(vertex);
+      const size_t size = inverse_index_count(vertex);
 
       for(size_t i = 0; i < size; i++) {
-        const uint32_t next = m_vertex_to_tri[offset + i] >> 2;
+        const uint32_t next = m_inverse_index_tri[offset + i] >> 2;
         if(visited.find(next) != visited.end())
           continue;
         visited.insert(next);
@@ -442,17 +450,17 @@ void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
 {
   std::unordered_set<uint32_t> visited;
 
-  if(m_vertex_to_tri.size() == 0)
-    reverse_index(true);
+  if(m_inverse_index_tri.size() == 0)
+    inverse_index_update(true);
 
 
-  const size_t offset = vertex_info_offset(start_vertex);
-  const size_t size = vertex_info_size(start_vertex);
+  const size_t offset = inverse_index_offset(start_vertex);
+  const size_t size = inverse_index_count(start_vertex);
 
   output.clear();
 
   for(size_t i = 0; i < size; i++) {
-    const uint32_t ti = m_vertex_to_tri[offset + i] >> 2;
+    const uint32_t ti = m_inverse_index_tri[offset + i] >> 2;
     visited.insert(ti);
     output.push_back(std::make_pair(0, ti));
   }
@@ -466,11 +474,11 @@ void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
 
     for(size_t j = 0; j < 3; j++) {
       const uint32_t vertex = m_indicies[3 * triangle + j];
-      const size_t offset = vertex_info_offset(vertex);
-      const size_t size = vertex_info_size(vertex);
+      const size_t offset = inverse_index_offset(vertex);
+      const size_t size = inverse_index_count(vertex);
 
       for(size_t i = 0; i < size; i++) {
-        const uint32_t next = m_vertex_to_tri[offset + i] >> 2;
+        const uint32_t next = m_inverse_index_tri[offset + i] >> 2;
         if(visited.find(next) != visited.end())
           continue;
         visited.insert(next);
