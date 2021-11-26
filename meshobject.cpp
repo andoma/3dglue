@@ -116,9 +116,9 @@ void main()
 
 namespace g3d {
 
-struct Mesh : public Object {
+struct MeshObject : public Object {
 
-  Mesh(const MeshData &data)
+  MeshObject(const MeshData &data)
     : m_attrib_buf(&data.m_attributes[0],
                    data.m_attributes.size() * sizeof(float),
                    GL_ARRAY_BUFFER)
@@ -288,9 +288,9 @@ struct Mesh : public Object {
 
 };
 
-std::shared_ptr<Object> makeMesh(const MeshData &data)
+std::shared_ptr<Object> makeMeshObject(const MeshData &data)
 {
-  return std::make_shared<Mesh>(data);
+  return std::make_shared<MeshObject>(data);
 }
 
 }

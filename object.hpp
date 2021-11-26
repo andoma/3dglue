@@ -45,7 +45,7 @@ std::shared_ptr<Object> makeCross();
 
 struct MeshData;
 
-std::shared_ptr<Object> makeMesh(const MeshData &data);
+std::shared_ptr<Object> makeMeshObject(const MeshData &data);
 
 std::shared_ptr<Object> makeSkybox(float checkersize);
 
