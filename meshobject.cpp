@@ -3,7 +3,7 @@
 
 #include "shader.hpp"
 #include "buffer.hpp"
-#include "meshdata.hpp"
+#include "mesh.hpp"
 #include "texture.hpp"
 
 // =================================================================
@@ -118,7 +118,7 @@ namespace g3d {
 
 struct MeshObject : public Object {
 
-  MeshObject(const MeshData &data)
+  MeshObject(const Mesh &data)
     : m_attrib_buf(&data.m_attributes[0],
                    data.m_attributes.size() * sizeof(float),
                    GL_ARRAY_BUFFER)
@@ -288,7 +288,7 @@ struct MeshObject : public Object {
 
 };
 
-std::shared_ptr<Object> makeMeshObject(const MeshData &data)
+std::shared_ptr<Object> makeMeshObject(const Mesh &data)
 {
   return std::make_shared<MeshObject>(data);
 }

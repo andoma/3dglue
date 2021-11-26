@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <string.h>
 
-#include "meshdata.hpp"
+#include "mesh.hpp"
 #include "ext/thread-pool/thread_pool.hpp"
 
 #include <glm/gtx/normal.hpp>
@@ -13,7 +13,7 @@
 namespace g3d {
 
 static void
-backref_vertex(uint32_t point, uint32_t ti, MeshData &md)
+backref_vertex(uint32_t point, uint32_t ti, Mesh &md)
 {
   // Scans the inverse index to find an empty slot (set to magic value 3)
   // Then write tringle-index there
@@ -30,7 +30,7 @@ backref_vertex(uint32_t point, uint32_t ti, MeshData &md)
   abort();
 }
 
-void MeshData::inverse_index_update(bool compress)
+void Mesh::inverse_index_update(bool compress)
 {
   if(m_indicies.size() % 3)
     throw std::runtime_error{"Elements not a multiple of 3"};
@@ -120,14 +120,14 @@ void MeshData::inverse_index_update(bool compress)
 }
 
 
-void MeshData::inverse_index_clear()
+void Mesh::inverse_index_clear()
 {
   m_inverse_index.clear();
   m_inverse_index_tri.clear();
 }
 
 
-void MeshData::compute_normals()
+void Mesh::compute_normals()
 {
   if(!has_normals())
     return;
@@ -171,7 +171,7 @@ void MeshData::compute_normals()
 
 
 
-void MeshData::remove_triangles(const glm::vec3 &direction)
+void Mesh::remove_triangles(const glm::vec3 &direction)
 {
   size_t o = 0;
   for(size_t i = 0; i < m_indicies.size(); i+= 3) {
@@ -195,7 +195,7 @@ void MeshData::remove_triangles(const glm::vec3 &direction)
 
 
 
-void MeshData::colorize_from_curvature()
+void Mesh::colorize_from_curvature()
 {
   if(!has_per_vertex_color())
     return;
@@ -254,7 +254,7 @@ void MeshData::colorize_from_curvature()
 
 
 static int
-scan_triangle(MeshData &md, uint32_t ti, std::vector<int> &ttg, int group)
+scan_triangle(Mesh &md, uint32_t ti, std::vector<int> &ttg, int group)
 {
   int count = 1;
   std::vector<int> todo;
@@ -286,7 +286,7 @@ scan_triangle(MeshData &md, uint32_t ti, std::vector<int> &ttg, int group)
   return count;
 }
 
-void MeshData::group_triangles()
+void Mesh::group_triangles()
 {
   if(m_inverse_index_tri.size() == 0)
     inverse_index_update(true);
@@ -326,7 +326,7 @@ void MeshData::group_triangles()
 
 
 
-void MeshData::compute_normals(uint32_t max_distance, thread_pool &tp)
+void Mesh::compute_normals(uint32_t max_distance, thread_pool &tp)
 {
   if(!has_normals())
     return;
@@ -371,7 +371,7 @@ void MeshData::compute_normals(uint32_t max_distance, thread_pool &tp)
 }
 
 
-void MeshData::find_neighbour_vertices(uint32_t start_vertex,
+void Mesh::find_neighbour_vertices(uint32_t start_vertex,
                                        uint32_t max_distance,
                                        std::vector<std::pair<uint32_t, uint32_t>> &output)
 {
@@ -408,7 +408,7 @@ void MeshData::find_neighbour_vertices(uint32_t start_vertex,
   }
 }
 
-void MeshData::find_neighbour_triangles(uint32_t start_triangle,
+void Mesh::find_neighbour_triangles(uint32_t start_triangle,
                                         uint32_t max_distance,
                                         std::vector<std::pair<uint32_t, uint32_t>> &output)
 {
@@ -444,7 +444,7 @@ void MeshData::find_neighbour_triangles(uint32_t start_triangle,
   }
 }
 
-void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
+void Mesh::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
                                                     uint32_t max_distance,
                                                     std::vector<std::pair<uint32_t, uint32_t>> &output)
 {
@@ -488,9 +488,9 @@ void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
   }
 }
 
-std::shared_ptr<MeshData> MeshData::cube(const glm::vec3 &pos, float s, const std::shared_ptr<Texture2D> &tex0)
+std::shared_ptr<Mesh> Mesh::cube(const glm::vec3 &pos, float s, const std::shared_ptr<Texture2D> &tex0)
 {
-  auto md = std::make_shared<MeshData>(MeshAttributes::Normals);
+  auto md = std::make_shared<Mesh>(MeshAttributes::Normals);
 
   md->m_attributes.resize(8 * md->m_apv);
 

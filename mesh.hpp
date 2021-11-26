@@ -46,9 +46,9 @@ inline constexpr bool has_uv0(MeshAttributes a) {
 
 
 
-struct MeshData {
+struct Mesh {
 
-  MeshData(MeshAttributes flags,
+  Mesh(MeshAttributes flags,
            const std::shared_ptr<Texture2D> &tex0 = nullptr)
     : m_attr_flags(flags | (tex0 ? MeshAttributes::UV0 : MeshAttributes::None))
     , m_apv(3 +
@@ -232,7 +232,7 @@ struct MeshData {
                                             std::vector<std::pair<uint32_t, uint32_t>> &output);
 
 
-  static std::shared_ptr<MeshData> cube(const glm::vec3 &pos, float size, const std::shared_ptr<Texture2D> &tex0 = nullptr);
+  static std::shared_ptr<Mesh> cube(const glm::vec3 &pos, float size, const std::shared_ptr<Texture2D> &tex0 = nullptr);
 
 };
 
