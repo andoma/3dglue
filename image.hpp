@@ -1,6 +1,7 @@
 #pragma once
 
-#include <GL/glew.h>
+#include <stdint.h>
+#include <stddef.h>
 
 namespace g3d {
 

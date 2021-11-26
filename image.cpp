@@ -1,4 +1,4 @@
-#include "texture.hpp"
+#include "image.hpp"
 
 #include <stdlib.h>
 #include <stdexcept>
