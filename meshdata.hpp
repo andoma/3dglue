@@ -12,36 +12,69 @@ namespace g3d {
 
 struct Texture2D;
 
+enum class MeshAttributes {
+  None = 0x0,
+  // Vertex usage is implicit
+  Normals = 0x1,
+  PerVertexColor = 0x2,
+  UV0 = 0x04,
+};
+
+inline constexpr MeshAttributes operator|(MeshAttributes a, MeshAttributes b) {
+  return static_cast<MeshAttributes>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline constexpr MeshAttributes operator&(MeshAttributes a, MeshAttributes b) {
+  return static_cast<MeshAttributes>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+inline constexpr bool operator!(MeshAttributes a) {
+  return static_cast<bool>(!static_cast<int>(a));
+}
+
+inline constexpr bool has_normals(MeshAttributes a) {
+  return !!(a & MeshAttributes::Normals);
+}
+
+inline constexpr bool has_per_vertex_color(MeshAttributes a) {
+  return !!(a & MeshAttributes::PerVertexColor);
+}
+
+inline constexpr bool has_uv0(MeshAttributes a) {
+  return !!(a & MeshAttributes::UV0);
+}
+
+
+
 struct MeshData {
 
-
-  MeshData(bool normals, bool per_vertex_color,
+  MeshData(MeshAttributes flags,
            const std::shared_ptr<Texture2D> &tex0 = nullptr)
-    : m_normals(normals)
-    , m_per_vertex_color(per_vertex_color)
+    : m_attr_flags(flags | (tex0 ? MeshAttributes::UV0 : MeshAttributes::None))
     , m_apv(3 +
-            (normals ? 3 : 0) +
-            (per_vertex_color ? 4 : 0) +
-            (tex0 ? 2 : 0))
-    , m_rgba_offset(3 + (normals ? 3 : 0))
-    , m_uv0_offset(m_rgba_offset + (per_vertex_color ? 4 : 0))
-    , m_tex0(tex0)
+            (has_normals() ? 3 : 0) +
+            (has_per_vertex_color() ? 4 : 0) +
+            (has_uv0() ? 2 : 0))
+    , m_rgba_offset(3 + (has_normals() ? 3 : 0))
+    , m_uv0_offset(m_rgba_offset + (has_per_vertex_color() ? 4 : 0))
   {}
 
-  MeshData(bool normals, bool per_vertex_color, bool uv)
-    : m_normals(normals)
-    , m_per_vertex_color(per_vertex_color)
-    , m_apv(3 +
-            (normals ? 3 : 0) +
-            (per_vertex_color ? 4 : 0) +
-            (uv ? 2 : 0))
-    , m_rgba_offset(3 + (normals ? 3 : 0))
-    , m_uv0_offset(m_rgba_offset + (per_vertex_color ? 4 : 0))
-  {}
+  bool has_normals() const {
+    return g3d::has_normals(m_attr_flags);
+  }
 
-  const bool m_normals;
-  const bool m_per_vertex_color;
+  bool has_per_vertex_color() const {
+    return g3d::has_per_vertex_color(m_attr_flags);
+  }
+
+  bool has_uv0() const {
+    return g3d::has_uv0(m_attr_flags);
+  }
+
+  const MeshAttributes m_attr_flags;
   const int m_apv; // Attributes Per Vertex
+
+  const size_t m_normal_offset = 3;
   const size_t m_rgba_offset;
   const size_t m_uv0_offset;
 
@@ -61,6 +94,13 @@ struct MeshData {
     m_attributes[vertex * m_apv + 0] = xyz.x;
     m_attributes[vertex * m_apv + 1] = xyz.y;
     m_attributes[vertex * m_apv + 2] = xyz.z;
+  }
+
+  void set_normal(size_t vertex, const glm::vec3 &xyz) {
+
+    m_attributes[vertex * m_apv + m_normal_offset + 0] = xyz.x;
+    m_attributes[vertex * m_apv + m_normal_offset + 1] = xyz.y;
+    m_attributes[vertex * m_apv + m_normal_offset + 2] = xyz.z;
   }
 
   void set_rgba(size_t vertex, const glm::vec4 &rgba) {
@@ -83,6 +123,32 @@ struct MeshData {
     m_indicies[face * 3 + 0] = v0;
     m_indicies[face * 3 + 1] = v1;
     m_indicies[face * 3 + 2] = v2;
+  }
+
+  // Not very efficient interface, but sometimes useful
+  size_t push_triangle(const glm::vec3 &v0,
+                       const glm::vec3 &v1,
+                       const glm::vec3 &v2,
+                       const glm::vec4 &rgba = glm::vec4{1})
+  {
+    size_t vi = num_vertices();
+    m_attributes.resize(m_attributes.size() + m_apv * 3);
+
+    size_t ii = m_indicies.size();
+    m_indicies.resize(m_indicies.size() + 3);
+
+    for(const auto &v : (const glm::vec3[]){v0, v1, v2}) {
+      set_xyz(vi, v);
+      if(has_normals())
+        set_normal(vi, glm::vec3{0});
+      if(has_per_vertex_color())
+        set_rgba(vi, rgba);
+      if(has_uv0())
+        set_uv0(vi, glm::vec2{0});
+      m_indicies[ii++] = vi;
+      vi++;
+    }
+    return vi - 3;
   }
 
 

@@ -142,7 +142,7 @@ void MeshData::remove_triangles(const glm::vec3 &direction)
 
 void MeshData::compute_normals()
 {
-  if(!m_normals)
+  if(!has_normals())
     return;
 
   if(m_vertex_to_tri.size() == 0)
@@ -183,10 +183,10 @@ void MeshData::compute_normals()
 
 void MeshData::colorize_from_curvature()
 {
-  if(!m_per_vertex_color)
+  if(!has_per_vertex_color())
     return;
 
-  int color_offset = m_normals ? 6 : 3;
+  const size_t color_offset = m_rgba_offset;
 
   if(m_vertex_to_tri.size() == 0)
     reverse_index(true);
@@ -320,7 +320,7 @@ void MeshData::clear_reverse()
 
 void MeshData::compute_normals(uint32_t max_distance, thread_pool &tp)
 {
-  if(!m_normals)
+  if(!has_normals())
     return;
 
   if(m_vertex_to_tri.size() == 0)
@@ -482,7 +482,7 @@ void MeshData::find_neighbour_triangles_from_vertex(uint32_t start_vertex,
 
 std::shared_ptr<MeshData> MeshData::cube(const glm::vec3 &pos, float s, const std::shared_ptr<Texture2D> &tex0)
 {
-  auto md = std::make_shared<MeshData>(true, false, tex0);
+  auto md = std::make_shared<MeshData>(MeshAttributes::Normals);
 
   md->m_attributes.resize(8 * md->m_apv);
 

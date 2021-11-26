@@ -125,8 +125,7 @@ struct Mesh : public Object {
     , m_index_buf(&data.m_indicies[0],
                   data.m_indicies.size() * sizeof(float),
                   GL_ELEMENT_ARRAY_BUFFER)
-    , m_normals(data.m_normals)
-    , m_per_vertex_color(data.m_per_vertex_color)
+    , m_attr_flags(data.m_attr_flags)
     , m_elements(data.m_indicies.size())
     , m_drawcount(m_elements / 3)
     , m_tex0(data.m_tex0)
@@ -137,9 +136,9 @@ struct Mesh : public Object {
     snprintf(hdr, sizeof(hdr),
              "#version 330 core\n"
              "%s%s%s",
-             m_normals ? "#define LIGHTING\n" : "",
-             m_per_vertex_color ? "#define PER_VERTEX_COLOR\n" : "",
-             m_tex0 ? "#define TEX0\n" : "");
+             has_normals(m_attr_flags) ? "#define LIGHTING\n" : "",
+             has_per_vertex_color(m_attr_flags) ? "#define PER_VERTEX_COLOR\n" : "",
+             has_uv0(m_attr_flags) ? "#define TEX0\n" : "");
 
     std::string vertex_shader(hdr);
     std::string fragment_shader(hdr);
@@ -147,16 +146,16 @@ struct Mesh : public Object {
     vertex_shader += mesh_vertex_shader;
     fragment_shader += mesh_fragment_shader;
 
-    m_shader = new Shader(vertex_shader.c_str(),
-                          fragment_shader.c_str());
+    m_shader = std::make_unique<Shader>(vertex_shader.c_str(),
+                                      fragment_shader.c_str());
 
     int apv = 3;
 
-    if(m_normals)
+    if(has_normals(m_attr_flags))
       apv += 3;
-    if(m_per_vertex_color)
+    if(has_per_vertex_color(m_attr_flags))
       apv += 4;
-    if(m_tex0)
+    if(has_uv0(m_attr_flags))
       apv += 2;
 
     m_vertices = data.m_attributes.size() / apv;
@@ -171,11 +170,11 @@ struct Mesh : public Object {
 
     m_shader->setMat4("PVM", P * V * m);
 
-    if(m_shader->has_uniform("M"))
+    if(m_shader->has_uniform("M")) {
       m_shader->setMat4("M", m);
+    }
 
-
-    if(m_per_vertex_color) {
+    if(has_per_vertex_color(m_attr_flags)) {
       m_shader->setFloat("colorize", m_colorize);
     }
 
@@ -194,26 +193,28 @@ struct Mesh : public Object {
 
     int off = 3;
 
-    if(m_normals) {
+    if(has_per_vertex_color(m_attr_flags)) {
       glEnableVertexAttribArray(1);
       glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, m_apv * sizeof(float),
                             (void*)(off * sizeof(float)));
       off += 3;
     }
 
-    if(m_per_vertex_color) {
+    if(has_per_vertex_color(m_attr_flags)) {
       glEnableVertexAttribArray(2);
       glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, m_apv * sizeof(float),
                             (void*)(off * sizeof(float)));
       off += 4;
     }
 
-    if(m_tex0) {
+    if(has_uv0(m_attr_flags)) {
       glEnableVertexAttribArray(3);
       glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, m_apv * sizeof(float),
                             (void*)(off * sizeof(float)));
       off += 2;
+    }
 
+    if(m_tex0) {
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, m_tex0->get());
       m_shader->setInt("tex0", 0);
@@ -250,7 +251,7 @@ struct Mesh : public Object {
 
       ImGui::SliderFloat("Color", &m_colorize, 0, 1);
 
-      if(m_normals) {
+      if(has_normals(m_attr_flags)) {
         ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
         ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
       }
@@ -265,13 +266,11 @@ struct Mesh : public Object {
     ImGui::End();
   }
 
-
   ArrayBuffer m_attrib_buf;
   ArrayBuffer m_index_buf;
-  const bool m_normals;
-  const bool m_per_vertex_color;
+  const MeshAttributes m_attr_flags;
   const size_t m_elements;
-  Shader *m_shader;
+  std::unique_ptr<Shader> m_shader;
   int m_apv;
   size_t m_vertices;
 
