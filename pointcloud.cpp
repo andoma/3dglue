@@ -1,12 +1,19 @@
 #include "object.hpp"
 
-#include "shader.hpp"
 #include "buffer.hpp"
+#include "shader.hpp"
 
 
 static const char *pc_vertex_shader = R"glsl(
-#version 330 core
-layout (location = 0) in vec3 pos;
+layout (location = 0) in vec3 aPos;
+
+#ifdef PER_VERTEX_COLOR
+layout (location = 1) in vec4 aCol;
+#endif
+
+#ifdef PER_VERTEX_TRAIT
+layout (location = 2) in float aTrait;
+#endif
 
 uniform mat4 PV;
 uniform mat4 model;
@@ -14,58 +21,43 @@ uniform vec4 albedo;
 uniform vec3 bbox1;
 uniform vec3 bbox2;
 uniform float alpha;
+uniform vec2 trait_minmax;
 
 out vec4 fragmentColor;
 
 void main()
 {
-   gl_Position = PV * model * vec4(pos.xyz, 1);
+   gl_Position = PV * model * vec4(aPos.xyz, 1);
 
-   vec3 s = step(bbox1, pos.xyz) - step(bbox2, pos.xyz);
+   vec3 s = step(bbox1, aPos.xyz) - step(bbox2, aPos.xyz);
    float inside = s.x * s.y * s.z;
 
-   fragmentColor = vec4(1,1,1, alpha * (inside + 0.25)) * albedo;
-}
+   float a = alpha * (inside + 0.25);
+#ifdef PER_VERTEX_TRAIT
+   a = a * (aTrait >= trait_minmax.x && aTrait <= trait_minmax.y ? 1.0 : 0.0);
+#endif
 
-)glsl";
-
-
-static const char *pc_vertex_shader_colors = R"glsl(
-#version 330 core
-layout (location = 0) in vec3 pos;
-layout (location = 1) in vec3 col;
-
-uniform mat4 PV;
-uniform mat4 model;
-uniform vec4 albedo;
-uniform vec3 bbox1;
-uniform vec3 bbox2;
-uniform float alpha;
-
-out vec4 fragmentColor;
-
-void main()
-{
-   gl_Position = PV * model * vec4(pos.xyz, 1);
-
-   vec3 s = step(bbox1, pos.xyz) - step(bbox2, pos.xyz);
-   float inside = s.x * s.y * s.z;
-
-   fragmentColor = vec4(col.xyz, alpha * (inside + 0.25));
+#ifdef PER_VERTEX_COLOR
+   fragmentColor = vec4(aCol.xyz, a) * albedo;
+#else
+   fragmentColor = vec4(1,1,1, a) * albedo;
+#endif
 }
 
 )glsl";
 
 
 static const char *pc_fragment_shader = R"glsl(
-
-#version 330 core
 out vec4 FragColor;
 in vec4 fragmentColor;
 
 void main()
 {
-  FragColor = fragmentColor;
+  if(fragmentColor.a == 0.0) {
+    discard;
+  } else {
+    FragColor = fragmentColor;
+  }
 }
 
 )glsl";
@@ -149,29 +141,43 @@ namespace g3d {
 
 struct PointCloud : public Object {
 
-  inline static Shader *s_pc_shader;
-  inline static Shader *s_pcc_shader;
   inline static Shader *s_bb_shader;
+
+  std::unique_ptr<Shader> m_shader;
 
   ArrayBuffer m_attrib_buf;
 
   PointCloud(size_t num_points,
              const float *xyz,
-             const float *rgb)
+             const float *rgb,
+             const float *trait)
     : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs),
                    GL_ARRAY_BUFFER)
     , m_xyz(xyz, num_points * sizeof(float) * 3, GL_ARRAY_BUFFER)
     , m_rgb(rgb, num_points * sizeof(float) * 3, GL_ARRAY_BUFFER)
+    , m_trait(trait, num_points * sizeof(float), GL_ARRAY_BUFFER)
     , m_colorized(!!rgb)
+    , m_traited(!!trait)
     , m_num_points(num_points)
   {
-    if(!s_pc_shader) {
-      s_pc_shader = new Shader(pc_vertex_shader, pc_fragment_shader);
-    }
 
-    if(!s_pcc_shader) {
-      s_pcc_shader = new Shader(pc_vertex_shader_colors, pc_fragment_shader);
-    }
+    char hdr[4096];
+
+    snprintf(hdr, sizeof(hdr),
+             "#version 330 core\n"
+             "%s%s",
+             rgb ? "#define PER_VERTEX_COLOR\n" : "",
+             trait ? "#define PER_VERTEX_TRAIT\n" : "");
+
+    std::string vertex_shader(hdr);
+    std::string fragment_shader(hdr);
+
+    vertex_shader += pc_vertex_shader;
+    fragment_shader += pc_fragment_shader;
+
+    m_shader = std::make_unique<Shader>(vertex_shader.c_str(),
+                                      fragment_shader.c_str());
+
 
     if(!s_bb_shader) {
       s_bb_shader = new Shader(bb_vertex_shader, bb_fragment_shader);
@@ -180,13 +186,19 @@ struct PointCloud : public Object {
 
   void draw(const glm::mat4 &P, const glm::mat4 &V) override
   {
-    Shader *s = m_colorized ? s_pcc_shader : s_pc_shader;
+    Shader *s = m_shader.get();
     s->use();
     s->setMat4("PV", P * V);
     s->setMat4("model", m_model_matrix);
-    if(!m_colorized)
-      s->setVec4("albedo", m_color);
+    s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
     s->setFloat("alpha", m_alpha);
+
+    if(m_trait_on) {
+      s->setVec2("trait_minmax", glm::vec2{m_trait_min, m_trait_max});
+    } else {
+      s->setVec2("trait_minmax", glm::vec2{-INFINITY, INFINITY});
+    }
+
 
     if(m_bb) {
       s->setVec3("bbox1", m_bbox_center - m_bbox_size * 0.5f);
@@ -208,10 +220,19 @@ struct PointCloud : public Object {
       glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, NULL);
     }
 
+    if(m_traited) {
+      glEnableVertexAttribArray(2);
+      glBindBuffer(GL_ARRAY_BUFFER, m_trait.m_buffer);
+      glVertexAttribPointer(2, 1, GL_FLOAT, GL_TRUE, 0, NULL);
+    }
+
     glDrawArrays(GL_POINTS, 0, m_num_points);
     glDisableVertexAttribArray(0);
     if(m_colorized) {
       glDisableVertexAttribArray(1);
+    }
+    if(m_traited) {
+      glDisableVertexAttribArray(2);
     }
 
     if(m_bb) {
@@ -283,6 +304,13 @@ struct PointCloud : public Object {
         ImGui::SliderFloat("Y##s", &m_bbox_size.y, 1, 5000);
         ImGui::SliderFloat("Z##s", &m_bbox_size.z, 1, 5000);
       }
+
+      ImGui::Checkbox("TraitRange", &m_trait_on);
+      if(m_trait_on) {
+        ImGui::SliderFloat("Min", &m_trait_min, -5, 100);
+        ImGui::SliderFloat("Max", &m_trait_max, -5, 100);
+      }
+
       ImGui::PopID();
 
     }
@@ -291,7 +319,9 @@ struct PointCloud : public Object {
 
   ArrayBuffer m_xyz;
   ArrayBuffer m_rgb;
+  ArrayBuffer m_trait;
   const bool m_colorized;
+  const bool m_traited;
   const size_t m_num_points;
 
   glm::vec4 m_color{1};
@@ -305,14 +335,19 @@ struct PointCloud : public Object {
   bool m_bb{false};
   float m_alpha{1};
   float m_pointsize{1};
+
+  bool m_trait_on{false};
+  float m_trait_min{0};
+  float m_trait_max{1};
 };
 
 
 std::shared_ptr<Object> makePointCloud(size_t num_points,
                                        const float *xyz,
-                                       const float *rgb)
+                                       const float *rgb,
+                                       const float *trait)
 {
-  return std::make_shared<PointCloud>(num_points, xyz, rgb);
+  return std::make_shared<PointCloud>(num_points, xyz, rgb, trait);
 }
 
 

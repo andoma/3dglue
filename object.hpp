@@ -39,7 +39,8 @@ struct Object {
 
 std::shared_ptr<Object> makePointCloud(size_t num_points,
                                        const float *xyz,
-                                       const float *rgb = NULL);
+                                       const float *rgb = NULL,
+                                       const float *trait = NULL);
 
 std::shared_ptr<Object> makeCross();
 
