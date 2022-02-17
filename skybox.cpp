@@ -55,8 +55,8 @@ void main()
 
       float fog = max(1 - (t * scale * 0.05), 0);
 
-      vec3 col = mix(vec3(0,0.6,0), vec3(0,1,0), checkerboard(floorpoint.xy, scale));
-      col = mix(vec3(0,0.8,0), col, fog);
+      vec3 col = mix(vec3(0.3,0.3,0.3), vec3(0.4,0.4,0.4), checkerboard(floorpoint.xy, scale));
+      col = mix(vec3(0.35,0.35,0.35), col, fog);
 
       FragColor = vec4(col, 1);
     }
