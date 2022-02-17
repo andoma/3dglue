@@ -83,7 +83,7 @@ struct RotCamera : public Camera {
   RotCamera(float scale, glm::vec3 lookat,
             const std::map<std::string, glm::mat4> &presets)
     : m_scale(scale)
-    , m_distance(-scale / 2)
+    , m_distance(-scale)
     , m_height(0)
     , m_lookat(lookat)
     , m_presets(presets)
@@ -104,7 +104,7 @@ struct RotCamera : public Camera {
     ImGui::Text("Camera ");
     ImGui::SliderAngle("Azimuth", &m_azimuth);
     ImGui::SliderFloat("Height", &m_height, -m_scale, m_scale);
-    ImGui::SliderFloat("Distance", &m_distance, -m_scale, m_scale);
+    ImGui::SliderFloat("Distance", &m_distance, -m_scale * 2, 0);
 
 
     ImGui::Text("Look at");
