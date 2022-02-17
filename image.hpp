@@ -16,6 +16,9 @@ struct Image2D {
   // Load encoded image from memory
   Image2D(const uint8_t *data, size_t len);
 
+  // Allocates memory for empty image
+  Image2D(size_t width, size_t height);
+
   // This takes ownership of *data
   Image2D(void **data, size_t width, size_t height)
     : m_data(*data)
@@ -26,6 +29,8 @@ struct Image2D {
   }
 
   ~Image2D();
+
+  void save_jpeg(const char *path, int quality, bool flip);
 
   void *m_data{NULL};
   size_t m_width{0};

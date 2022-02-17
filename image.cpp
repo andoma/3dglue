@@ -10,6 +10,9 @@
 #endif
 #include "stb_image.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 namespace g3d {
 
 Image2D::Image2D(const char *path)
@@ -27,6 +30,13 @@ Image2D::Image2D(const uint8_t *data, size_t len)
 Image2D::~Image2D()
 {
   free(m_data);
+}
+
+Image2D::Image2D(size_t width, size_t height)
+{
+  m_width = width;
+  m_height = height;
+  m_data = calloc(1, width * height * 3);
 }
 
 int Image2D::load(const char *path)
@@ -59,5 +69,12 @@ int Image2D::load(const uint8_t *data, size_t len)
   m_height = height;
   return 0;
 }
+
+void Image2D::save_jpeg(const char *path, int quality, bool flip)
+{
+  stbi_flip_vertically_on_write(flip);
+  stbi_write_jpg(path, m_width, m_height, 3, m_data, quality);
+}
+
 
 }
