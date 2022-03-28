@@ -16,7 +16,6 @@ void main()
 
 )glsl";
 
-
 static const char *skybox_fragment_shader = R"glsl(
 
 #version 330 core
@@ -65,71 +64,60 @@ void main()
 
 )glsl";
 
-
-
 static const float attribs[6][2] = {
-  {-1, -1},
-  { 1, -1},
-  { 1,  1},
+    {-1, -1}, {1, -1}, {1, 1},
 
-  {-1, -1},
-  { 1,  1},
-  {-1,  1},
+    {-1, -1}, {1, 1},  {-1, 1},
 };
 
 namespace g3d {
 
 struct Skybox : public Object {
+    inline static Shader *s_shader;
 
-  inline static Shader *s_shader;
+    ArrayBuffer m_attrib_buf;
 
-  ArrayBuffer m_attrib_buf;
-
-  Skybox(float checkersize)
-    : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs),
-                   GL_ARRAY_BUFFER)
-    , m_checkersize(checkersize)
-  {
-    if(!s_shader) {
-      s_shader = new Shader(skybox_vertex_shader, skybox_fragment_shader);
+    Skybox(float checkersize)
+      : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
+      , m_checkersize(checkersize)
+    {
+        if(!s_shader) {
+            s_shader = new Shader(skybox_vertex_shader, skybox_fragment_shader);
+        }
     }
-  }
 
+    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    {
+        s_shader->use();
+        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
-  void draw(const glm::mat4 &P, const glm::mat4 &V) override
-  {
-    s_shader->use();
-    glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
+        s_shader->setVec3("cam", glm::inverse(V)[3]);
+        s_shader->setMat4("PVinv", glm::inverse(P * V));
+        s_shader->setFloat("scale", 0.5f / m_checkersize);
 
-    s_shader->setVec3("cam", glm::inverse(V)[3]);
-    s_shader->setMat4("PVinv", glm::inverse(P * V));
-    s_shader->setFloat("scale", 0.5f / m_checkersize);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDisableVertexAttribArray(0);
-  }
-
-
-  void prepare() override
-  {
-    if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Skybox")) {
-      ImGui::Checkbox("Visible", &m_visible);
-      ImGui::SliderFloat("CheckerSize", &m_checkersize, 10, 10000,
-                         "%.1f", ImGuiSliderFlags_Logarithmic);
-
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDisableVertexAttribArray(0);
     }
-    ImGui::End();
-  }
 
-  float m_checkersize{1000};
+    void prepare() override
+    {
+        if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Skybox")) {
+            ImGui::Checkbox("Visible", &m_visible);
+            ImGui::SliderFloat("CheckerSize", &m_checkersize, 10, 10000, "%.1f",
+                               ImGuiSliderFlags_Logarithmic);
+        }
+        ImGui::End();
+    }
+
+    float m_checkersize{1000};
 };
 
-
-std::shared_ptr<Object> makeSkybox(float checkersize)
+std::shared_ptr<Object>
+makeSkybox(float checkersize)
 {
-  return std::make_shared<Skybox>(checkersize);
+    return std::make_shared<Skybox>(checkersize);
 }
 
-}
+}  // namespace g3d

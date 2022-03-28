@@ -11,28 +11,26 @@ struct Object;
 struct Camera;
 
 struct Scene {
+    virtual ~Scene(){};
 
-  virtual ~Scene() {};
+    virtual bool prepare() = 0;
 
-  virtual bool prepare() = 0;
+    virtual void draw() = 0;
 
-  virtual void draw() = 0;
+    std::shared_ptr<Camera> m_camera;
 
-  std::shared_ptr<Camera> m_camera;
+    std::vector<std::shared_ptr<Object>> m_objects;
 
-  std::vector<std::shared_ptr<Object>> m_objects;
+    std::shared_ptr<Object> m_skybox;
 
-  std::shared_ptr<Object> m_skybox;
+    glm::mat4 m_P{1};
 
-  glm::mat4 m_P{1};
+    glm::mat4 m_V{1};
 
-  glm::mat4 m_V{1};
-
-  virtual glm::vec3 cursorDirection() = 0;
+    virtual glm::vec3 cursorDirection() = 0;
 };
 
+std::shared_ptr<Scene> makeGLFWImguiScene(const char *title, int width,
+                                          int height);
 
-std::shared_ptr<Scene> makeGLFWImguiScene(const char *title,
-                                          int width, int height);
-
-}
+}  // namespace g3d

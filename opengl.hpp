@@ -11,7 +11,6 @@
 
 #include <GLFW/glfw3.h>
 
-
 namespace g3d {
 
 GLenum checkGlError_(const char *file, int line);

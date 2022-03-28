@@ -3,7 +3,6 @@
 #include "shader.hpp"
 #include "buffer.hpp"
 
-
 static const char *line_vertex_shader = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 vtx;
@@ -22,7 +21,6 @@ void main()
 
 )glsl";
 
-
 static const char *line_fragment_shader = R"glsl(
 
 #version 330 core
@@ -40,47 +38,41 @@ void main()
 namespace g3d {
 
 struct Line : public Object {
+    inline static Shader *s_shader;
 
-  inline static Shader *s_shader;
-
-  ArrayBuffer m_attrib_buf;
-  Line(const glm::vec3 segment[2])
-    : m_attrib_buf((void *)&segment[0][0], sizeof(glm::vec3) * 2,
-                   GL_ARRAY_BUFFER)
-  {
-    if(!s_shader) {
-      s_shader = new Shader(line_vertex_shader, line_fragment_shader);
+    ArrayBuffer m_attrib_buf;
+    Line(const glm::vec3 segment[2])
+      : m_attrib_buf((void *)&segment[0][0], sizeof(glm::vec3) * 2,
+                     GL_ARRAY_BUFFER)
+    {
+        if(!s_shader) {
+            s_shader = new Shader(line_vertex_shader, line_fragment_shader);
+        }
     }
-  }
 
+    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    {
+        s_shader->use();
+        s_shader->setMat4("PV", P * V);
+        s_shader->setMat4("model", m_model_matrix);
+        s_shader->setVec4("col", m_color);
 
-  void draw(const glm::mat4 &P, const glm::mat4 &V) override
-  {
-    s_shader->use();
-    s_shader->setMat4("PV", P * V);
-    s_shader->setMat4("model", m_model_matrix);
-    s_shader->setVec4("col", m_color);
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void *)NULL);
+        glDrawArrays(GL_LINES, 0, 2);
+        glDisableVertexAttribArray(0);
+    }
 
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void*)NULL);
-    glDrawArrays(GL_LINES, 0, 2);
-    glDisableVertexAttribArray(0);
-  }
+    void setColor(const glm::vec4 &col) override { m_color = col; }
 
-  void setColor(const glm::vec4& col) override
-  {
-    m_color = col;
-  }
-
-  glm::vec4 m_color{1};
+    glm::vec4 m_color{1};
 };
 
-
-
-std::shared_ptr<Object> makeLine(const glm::vec3 segment[2])
+std::shared_ptr<Object>
+makeLine(const glm::vec3 segment[2])
 {
-  return std::make_shared<Line>(segment);
+    return std::make_shared<Line>(segment);
 }
 
-}
+}  // namespace g3d
