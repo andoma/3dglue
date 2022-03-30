@@ -46,16 +46,32 @@ resize_callback(GLFWwindow *window, int width, int height)
 }
 
 static void
-scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
-    GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
-
-    if(s->m_camera != NULL)
-        s->m_camera->scrollInput(xoffset, yoffset);
+    ImGuiIO &io = ImGui::GetIO();
+    if(!io.WantCaptureMouse) {
+        return;
+    }
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 static void
-key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    if(!io.WantCaptureMouse) {
+        GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
+
+        if(s->m_camera != NULL)
+            s->m_camera->scrollInput(xoffset, yoffset);
+
+        return;
+    }
+    ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+}
+
+static void
+KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
 
@@ -68,9 +84,26 @@ key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
                 } else {
                     s->m_camera->positionRecall(slot);
                 }
+                return;
             }
         }
     }
+
+    ImGuiIO &io = ImGui::GetIO();
+    if(!io.WantCaptureMouse) {
+        return;
+    }
+    ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+}
+
+static void
+CharCallback(GLFWwindow *window, unsigned int c)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    if(!io.WantCaptureMouse) {
+        return;
+    }
+    ImGui_ImplGlfw_CharCallback(window, c);
 }
 
 GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
@@ -94,9 +127,6 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
     }
     glfwSetWindowUserPointer(m_window, this);
     glfwSetWindowPos(m_window, 50, 50);
-    glfwSetScrollCallback(m_window, scroll_callback);
-    glfwSetKeyCallback(m_window, key_callback);
-
     glfwSetWindowSizeCallback(m_window, resize_callback);
     glfwMakeContextCurrent(m_window);
     glfwSwapInterval(1);
@@ -110,7 +140,16 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
     (void)io;
 
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+    ImGui_ImplGlfw_InitForOpenGL(m_window, false);
+
+    glfwSetWindowFocusCallback(m_window, ImGui_ImplGlfw_WindowFocusCallback);
+    glfwSetCursorEnterCallback(m_window, ImGui_ImplGlfw_CursorEnterCallback);
+    glfwSetMouseButtonCallback(m_window, MouseButtonCallback);
+    glfwSetScrollCallback(m_window, ScrollCallback);
+    glfwSetKeyCallback(m_window, KeyCallback);
+    glfwSetCharCallback(m_window, CharCallback);
+    glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
+
     ImGui_ImplOpenGL3_Init();
 
     glGenVertexArrays(1, &m_vao);
