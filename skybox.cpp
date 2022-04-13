@@ -52,7 +52,7 @@ void main()
     } else {
       vec3 floorpoint = cam + t * dir;
 
-      float fog = max(1 - (t * scale * 0.05), 0);
+      float fog = max(1 - (t * scale * 0.01), 0);
 
       vec3 col = mix(vec3(0.3,0.3,0.3), vec3(0.4,0.4,0.4), checkerboard(floorpoint.xy, scale));
       col = mix(vec3(0.35,0.35,0.35), col, fog);

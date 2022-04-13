@@ -7,28 +7,33 @@
 namespace g3d {
 
 struct Camera {
+    enum class Control {
+        DRAG1,
+        DRAG2,
+        DRAG3,
+        DRAG4,
+        SCROLL,
+    };
+
     virtual ~Camera(){};
 
     virtual glm::mat4 compute() = 0;
 
-    virtual glm::vec3 lookAt() { return glm::vec3{0, 0, 0}; };
+    virtual glm::vec3 lookAt() const = 0;
 
-    virtual glm::vec3 camPosition() = 0;
+    virtual glm::vec3 position() const = 0;
 
     virtual void positionStore(int slot){};
 
     virtual void positionRecall(int slot){};
 
-    virtual void scrollInput(double x, double y){};
+    virtual void uiInput(Control c, const glm::vec2 &xy){};
 
     virtual void select(const std::string &preset){};
 };
 
-std::shared_ptr<Camera> makeLookat(float scale,
-                                   const glm::vec3 &initial_position,
-                                   bool z_is_up = false);
-
-std::shared_ptr<Camera> makeRotCamera(
-    float scale, glm::vec3 lookat,
+std::shared_ptr<Camera> makeArcBallCamera(
+    glm::vec3 lookat, glm::vec3 position,
     const std::map<std::string, glm::mat4> &presets = {});
+
 }  // namespace g3d

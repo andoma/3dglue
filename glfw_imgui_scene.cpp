@@ -19,6 +19,8 @@ struct GLFWImguiScene : public Scene {
 
     void draw() override;
 
+    glm::vec2 normalizedCursor();
+
     GLFWwindow *m_window;
     int m_width;
     int m_height;
@@ -28,6 +30,16 @@ struct GLFWImguiScene : public Scene {
     float m_fov{45};
 
     std::shared_ptr<Object> m_crosshair;
+
+    glm::vec2 m_cursor_prev{0};
+
+    bool m_left_down{false};
+
+    bool m_right_down{false};
+
+    bool m_shift_down{false};
+
+    bool m_alt_down{false};
 };
 
 static void
@@ -50,6 +62,23 @@ MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
     ImGuiIO &io = ImGui::GetIO();
     if(!io.WantCaptureMouse) {
+        GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
+
+        if(s->m_camera == NULL)
+            return;
+
+        if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            s->m_left_down = true;
+        }
+        if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+            s->m_left_down = false;
+        }
+        if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+            s->m_right_down = true;
+        }
+        if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
+            s->m_right_down = false;
+        }
         return;
     }
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
@@ -62,9 +91,11 @@ ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
     if(!io.WantCaptureMouse) {
         GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
 
-        if(s->m_camera != NULL)
-            s->m_camera->scrollInput(xoffset, yoffset);
-
+        if(s->m_camera == NULL)
+            return;
+        float scale = s->m_shift_down ? 0.1f : 1.0f;
+        s->m_camera->uiInput(Camera::Control::SCROLL,
+                             glm::vec2{-xoffset, yoffset} * scale);
         return;
     }
     ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
@@ -74,6 +105,14 @@ static void
 KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
+
+    if(key == GLFW_KEY_LEFT_SHIFT) {
+        s->m_shift_down = action == GLFW_PRESS;
+    }
+
+    if(key == GLFW_KEY_LEFT_ALT) {
+        s->m_alt_down = action == GLFW_PRESS;
+    }
 
     if(s->m_camera != NULL) {
         if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
@@ -179,7 +218,26 @@ GLFWImguiScene::prepare()
 
     ImGui::NewFrame();
 
+    auto cursor = normalizedCursor();
+    auto cursor_delta = cursor - m_cursor_prev;
+
     if(m_camera != NULL) {
+        if(m_left_down) {
+            if(m_alt_down) {
+                m_camera->uiInput(Camera::Control::DRAG3, cursor_delta);
+            } else if(m_shift_down) {
+                m_camera->uiInput(Camera::Control::DRAG2, cursor_delta);
+            } else {
+                m_camera->uiInput(Camera::Control::DRAG1, cursor_delta);
+            }
+        } else if(m_right_down) {
+            if(m_shift_down) {
+                m_camera->uiInput(Camera::Control::DRAG4, cursor_delta);
+            } else {
+                m_camera->uiInput(Camera::Control::DRAG3, cursor_delta);
+            }
+        }
+
         if(ImGui::Begin("Camera")) {
             ImGui::SliderFloat("FOV", &m_fov, 1, 180);
 
@@ -209,11 +267,13 @@ GLFWImguiScene::prepare()
         ImGui::PopID();
     }
 
+    m_cursor_prev = cursor;
+
     return true;
 }
 
-glm::vec3
-GLFWImguiScene::cursorDirection()
+glm::vec2
+GLFWImguiScene::normalizedCursor()
 {
     double mouse_x, mouse_y;
     int display_w, display_h;
@@ -224,6 +284,14 @@ GLFWImguiScene::cursorDirection()
     auto cursor =
         (glm::vec2(mouse_x, mouse_y) / glm::vec2(display_w, display_h)) * 2.0f -
         1.0f;
+    return cursor;
+}
+
+glm::vec3
+GLFWImguiScene::cursorDirection()
+{
+    auto cursor = normalizedCursor();
+
     auto ray =
         glm::inverse(m_P * m_V) * glm::vec4(cursor.x, -cursor.y, 0, 1.0f);
     return glm::normalize(glm::vec3(ray));
