@@ -183,7 +183,7 @@ struct MeshObject : public Object {
 
         int off = 3;
 
-        if(has_per_vertex_color(m_attr_flags)) {
+        if(has_normals(m_attr_flags)) {
             glEnableVertexAttribArray(1);
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
                                   m_apv * sizeof(float),
