@@ -38,28 +38,32 @@ void main()
   vec4 p = PVinv * vec4(coord, 0, 1);
   vec3 dir = normalize(p.xyz);
 
+  vec3 bg;
+
   if(dir.z > 0) {
-
-    FragColor = mix(vec4(0.5, 0.5, 1, 1), vec4(0, 0, 0.5, 1), dir.z);
-
+    // Sky
+    bg = mix(vec3(0.5, 0.5, 1), vec3(0, 0, 0.5), dir.z);
   } else {
-
-    vec3 ground = vec3(0,0,-1);
-    float t = -(dot(ground, cam) + 0) / dot(ground, dir);
-
-    if(t <= 0) {
-      FragColor = vec4(0, 0, 0, 1);
-    } else {
-      vec3 floorpoint = cam + t * dir;
-
-      float fog = max(1 - (t * scale * 0.01), 0);
-
-      vec3 col = mix(vec3(0.3,0.3,0.3), vec3(0.4,0.4,0.4), checkerboard(floorpoint.xy, scale));
-      col = mix(vec3(0.35,0.35,0.35), col, fog);
-
-      FragColor = vec4(col, 1);
-    }
+    // Ground
+    bg = mix(vec3(0.2, 0.2, 0.2), vec3(0, 0, 0), -dir.z);
   }
+
+  vec3 ground = vec3(0, 0, -1);
+  float t = -(dot(ground, cam) + 0) / dot(ground, dir);
+
+  if(t > 0) {
+    vec3 floorpoint = cam + t * dir;
+
+    float fog = max(1 - (t * scale * 0.01), 0);
+
+    const float c0 = 0.1;
+    const float c1 = 0.15;
+
+    float c = mix(c0, c1, checkerboard(floorpoint.xy, scale));
+    c = mix((c0 + c1) * 0.5, c, fog);
+    bg += vec3(c, c, c);
+  }
+  FragColor = vec4(bg, 1);
 }
 
 )glsl";
