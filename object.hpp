@@ -42,7 +42,9 @@ struct Mesh;
 
 std::shared_ptr<Object> makeMeshObject(const Mesh &data);
 
-std::shared_ptr<Object> makeSkybox(float checkersize);
+std::shared_ptr<Object> makeSkybox();
+
+std::shared_ptr<Object> makeGround(float checkersize);
 
 std::shared_ptr<Object> makeLine(const glm::vec3 segment[2]);
 

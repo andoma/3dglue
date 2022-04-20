@@ -30,6 +30,8 @@ struct GLFWImguiScene : public Scene {
     float m_fov{45};
 
     std::shared_ptr<Object> m_crosshair;
+    std::shared_ptr<Object> m_skybox;
+    std::shared_ptr<Object> m_ground;
 
     glm::vec2 m_cursor_prev{0};
 
@@ -194,7 +196,10 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
     glGenVertexArrays(1, &m_vao);
 
     m_crosshair = makeCross();
-    m_objects.push_back(m_crosshair);
+
+    m_skybox = makeSkybox();
+
+    m_ground = makeGround(1000);
 }
 
 GLFWImguiScene::~GLFWImguiScene()
@@ -238,24 +243,25 @@ GLFWImguiScene::prepare()
             }
         }
 
-        if(ImGui::Begin("Camera")) {
+        if(ImGui::Begin("Scene")) {
             ImGui::SliderFloat("FOV", &m_fov, 1, 180);
-
-            ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
 
             auto proj = glm::perspective(
                 glm::radians(m_fov), (float)m_width / m_height, 10.0f, -10.0f);
 
             m_P = proj;
             m_V = m_camera->compute();
-        }
-        ImGui::End();
-    }
 
-    if(m_skybox != NULL) {
-        ImGui::PushID((void *)m_skybox.get());
-        m_skybox->prepare();
-        ImGui::PopID();
+            ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
+
+            if(m_skybox)
+                m_skybox->prepare();
+
+            if(m_ground)
+                m_ground->prepare();
+        }
+
+        ImGui::End();
     }
 
     m_crosshair->setModelMatrix(glm::scale(
@@ -310,6 +316,9 @@ GLFWImguiScene::draw()
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
     if(m_skybox && m_skybox->m_visible)
         m_skybox->draw(m_P, m_V);
 
@@ -321,6 +330,14 @@ GLFWImguiScene::draw()
         if(o->m_visible)
             o->draw(m_P, m_V);
     }
+
+    if(m_ground && m_ground->m_visible)
+        m_ground->draw(m_P, m_V);
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    if(m_crosshair->m_visible)
+        m_crosshair->draw(m_P, m_V);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
