@@ -8,6 +8,9 @@
 
 #include <glm/gtx/matrix_decompose.hpp>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 namespace g3d {
 
 struct ArcBallCamera : public Camera {
@@ -35,23 +38,32 @@ struct ArcBallCamera : public Camera {
         m_distance = glm::length(glm::length(position - m_lookat));
     }
 
-    glm::vec3 lookAt() const override { return m_lookat; }
-
-    glm::vec3 position() const override
+    glm::vec3 lookAt() const override
     {
-        return glm::vec3{0};  // FIXME
+        return m_lookat;
     }
 
-    glm::mat4 compute() override
+    glm::mat4 computeViewInverse() const
     {
         auto T0 = glm::translate(glm::mat4(1.0f), glm::vec3{0, 0, m_distance});
         auto R = glm::mat4_cast(m_rotation);
         auto T1 = glm::translate(glm::mat4(1.0f), m_lookat);
-
         auto V = T1 * R * T0;
-        m_position = V[3];
+        return V;
+    }
 
-        auto view = glm::inverse(V);
+    glm::vec3 position() const override
+    {
+        auto V_I = computeViewInverse();
+        return V_I[3];
+    }
+
+    glm::mat4 compute() override
+    {
+        auto V_I = computeViewInverse();
+        auto position = V_I[3];
+
+        auto view = glm::inverse(V_I);
 
         glm::vec3 scale;
         glm::quat orientation;
@@ -72,7 +84,7 @@ struct ArcBallCamera : public Camera {
         ImGui::Text("Camera");
         ImGui::Indent();
         ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f",
-                    m_position.x, m_position.y, m_position.z);
+                    position.x, position.y, position.z);
         ImGui::Text("Distance:%9.2f", m_distance);
         ImGui::Text("Yaw:% 6.1f°  Pitch:% 6.1f°  Roll:% 6.1f°",
                     euler.x, euler.y, euler.z);
@@ -131,62 +143,55 @@ struct ArcBallCamera : public Camera {
         }
     }
 
-    void select(const glm::mat4 &m)
+    void set(const glm::mat4 &m)
     {
-        /*
-                auto pos = m[3];
-                auto dir = glm::normalize(m[1]);  // Positive Y
+        auto pos = m[3];
+        auto dir = glm::normalize(m[1]);  // Positive Y
 
-                auto lookat = pos + dir * 1000.0f;
-
-                auto r = pos - lookat;
-                m_lookat = lookat;
-                m_height = r.z;
-                m_azimuth = atan2f(-r.x, -r.y);
-                m_distance = -sqrtf(r.x * r.x + r.y * r.y);
-        */
+        m_lookat = pos + dir * 1000.0f;
+        init_from_position(pos);
     }
 
     void select(const std::string &preset) override
     {
-        /*
-            auto it = m_presets.find(preset);
-            if(it != m_presets.end())
-                select(it->second);
-            */
+        auto it = m_presets.find(preset);
+        if(it != m_presets.end())
+            set(it->second);
     }
 
     void positionStore(int slot) override
     {
-        /*
+        mkdir(".3dglue", 0777);
+
         char name[PATH_MAX];
-        snprintf(name, sizeof(name), ".rotcam%d", slot);
+        snprintf(name, sizeof(name), ".3dglue/arcballcam%d", slot);
         FILE *fp = fopen(name, "w");
-        fprintf(fp, "%f %f %f %f %f %f\n", m_distance, m_height, m_azimuth,
-                m_lookat.x, m_lookat.y, m_lookat.z);
+        fprintf(fp, "%f %f %f %f %f %f %f %f\n",
+                m_distance,
+                m_lookat.x, m_lookat.y, m_lookat.z,
+                m_rotation.x, m_rotation.y, m_rotation.z, m_rotation.w);
         fclose(fp);
-        */
     }
 
     void positionRecall(int slot) override
     {
-        /*
         char name[PATH_MAX];
-        snprintf(name, sizeof(name), ".rotcam%d", slot);
+        snprintf(name, sizeof(name), ".3dglue/arcballcam%d", slot);
         FILE *fp = fopen(name, "r");
-        if(fp) {
-            if(fscanf(fp, "%f %f %f %f %f %f\n", &m_distance, &m_height,
-                      &m_azimuth, &m_lookat.x, &m_lookat.y, &m_lookat.z)) {
-            }
-            fclose(fp);
+        if(fp == NULL)
+            return;
+
+        if(fscanf(fp, "%f %f %f %f %f %f %f %f\n",
+                  &m_distance,
+                  &m_lookat.x, &m_lookat.y, &m_lookat.z,
+                  &m_rotation.x, &m_rotation.y, &m_rotation.z, &m_rotation.w)) {
         }
-        */
+        fclose(fp);
     }
 
     glm::vec3 m_lookat;
     glm::quat m_rotation;
     float m_distance;
-    glm::vec3 m_position;
 
     const std::map<std::string, glm::mat4> m_presets;
 };
