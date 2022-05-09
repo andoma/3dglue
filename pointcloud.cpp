@@ -273,8 +273,8 @@ struct PointCloud : public Object {
 
             ImGui::Checkbox("TraitRange", &m_trait_on);
             if(m_trait_on) {
-                ImGui::SliderFloat("Min", &m_trait_min, -5, 100);
-                ImGui::SliderFloat("Max", &m_trait_max, -5, 100);
+                ImGui::SliderFloat("Min", &m_trait_min, 0, 1);
+                ImGui::SliderFloat("Max", &m_trait_max, 0, 1);
             }
 
             ImGui::PopID();
