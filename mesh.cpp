@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <vector>
+#include <stdexcept>
+
 #include <string.h>
 #include <glm/gtx/normal.hpp>
 
