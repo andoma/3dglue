@@ -143,25 +143,20 @@ struct PointCloud : public Object {
                  rgb ? "#define PER_VERTEX_COLOR\n" : "",
                  trait ? "#define PER_VERTEX_TRAIT\n" : "");
 
-        std::string vertex_shader(hdr);
-        std::string fragment_shader(hdr);
-
-        vertex_shader += pc_vertex_shader;
-        fragment_shader += pc_fragment_shader;
-
-        m_shader = std::make_unique<Shader>(vertex_shader.c_str(),
-                                            fragment_shader.c_str());
+        m_shader = std::make_unique<Shader>("pointcloud", hdr, pc_vertex_shader,
+                                            -1, pc_fragment_shader, -1);
 
         if(!s_bb_shader) {
-            s_bb_shader = new Shader(bb_vertex_shader, bb_fragment_shader);
+            s_bb_shader = new Shader("pointcloud-bb", NULL, bb_vertex_shader,
+                                     -1, bb_fragment_shader, -1);
         }
     }
 
-    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    void draw(const Scene &scene) override
     {
         Shader *s = m_shader.get();
         s->use();
-        s->setMat4("PV", P * V);
+        s->setMat4("PV", scene.m_P * scene.m_V);
         s->setMat4("model", m_model_matrix);
         s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
         s->setFloat("alpha", m_alpha);
@@ -209,7 +204,7 @@ struct PointCloud : public Object {
 
         if(m_bb) {
             s_bb_shader->use();
-            s_bb_shader->setMat4("PV", P * V);
+            s_bb_shader->setMat4("PV", scene.m_P * scene.m_V);
 
             auto m = m_model_matrix;
 
@@ -230,7 +225,7 @@ struct PointCloud : public Object {
 
     void setColor(const glm::vec4 &c) override { m_color = c; }
 
-    void ui() override
+    void ui(const Scene &s) override
     {
         ImGui::Text("%zd points", m_num_points);
         ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);

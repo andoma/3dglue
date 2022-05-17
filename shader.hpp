@@ -13,30 +13,46 @@ struct Shader {
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
 
-    Shader(const char *vcode, const char *fcode, const char *gcode = NULL)
+    Shader(const char *name, const char *header, const char *vcode,
+           int vcode_len, const char *fcode, int fcode_len,
+           const char *gcode = NULL, int gcode_len = 0)
     {
         GLint success;
         char err[1024];
 
+        const char *codevec[2];
+        int codelen[2];
+
+        codevec[0] = header ?: "";
+        codelen[0] = -1;
+
+        codevec[1] = vcode;
+        codelen[1] = vcode_len;
+
         uint32_t vertex = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertex, 1, &vcode, NULL);
+        glShaderSource(vertex, 2, codevec, codelen);
         glCompileShader(vertex);
 
         glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
         if(!success) {
             glGetShaderInfoLog(vertex, sizeof(err), NULL, err);
-            fprintf(stderr, "Unable to compile vertex shader:\n%s\n", err);
+            fprintf(stderr, "Unable to compile vertex shader: %s:\n%s\n", name,
+                    err);
             exit(1);
         }
 
+        codevec[1] = fcode;
+        codelen[1] = fcode_len;
+
         uint32_t fragment = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragment, 1, &fcode, NULL);
+        glShaderSource(fragment, 2, codevec, codelen);
         glCompileShader(fragment);
 
         glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
         if(!success) {
             glGetShaderInfoLog(fragment, sizeof(err), NULL, err);
-            fprintf(stderr, "Unable to compile fragment shader:\n%s\n", err);
+            fprintf(stderr, "Unable to compile fragment shader: %s:\n%s\n",
+                    name, err);
             exit(1);
         }
 
@@ -46,14 +62,17 @@ struct Shader {
 
         if(gcode != NULL) {
             uint32_t geometry = glCreateShader(GL_GEOMETRY_SHADER);
-            glShaderSource(geometry, 1, &gcode, NULL);
+
+            codevec[1] = gcode;
+            codelen[1] = gcode_len;
+            glShaderSource(geometry, 2, codevec, codelen);
             glCompileShader(geometry);
 
             glGetShaderiv(geometry, GL_COMPILE_STATUS, &success);
             if(!success) {
                 glGetShaderInfoLog(geometry, sizeof(err), NULL, err);
-                fprintf(stderr, "Unable to compile geometry shader:\n%s\n",
-                        err);
+                fprintf(stderr, "Unable to compile geometry shader: %s:\n%s\n",
+                        name, err);
                 exit(1);
             }
             glAttachShader(m_id, geometry);
@@ -63,7 +82,7 @@ struct Shader {
         glGetProgramiv(m_id, GL_LINK_STATUS, &success);
         if(!success) {
             glGetProgramInfoLog(m_id, sizeof(err), NULL, err);
-            fprintf(stderr, "Unable to link shader:\n%s\n", err);
+            fprintf(stderr, "Unable to link shader: %s:\n%s\n", name, err);
             exit(1);
         }
 

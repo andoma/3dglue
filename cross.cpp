@@ -52,14 +52,15 @@ struct Cross : public Object {
       : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
     {
         if(!s_shader) {
-            s_shader = new Shader(cross_vertex_shader, cross_fragment_shader);
+            s_shader = new Shader("cross", NULL, cross_vertex_shader, -1,
+                                  cross_fragment_shader, -1);
         }
     }
 
-    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    void draw(const Scene &s) override
     {
         s_shader->use();
-        s_shader->setMat4("PV", P * V);
+        s_shader->setMat4("PV", s.m_P * s.m_V);
         s_shader->setMat4("model", m_model_matrix);
 
         glEnableVertexAttribArray(0);

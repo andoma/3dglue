@@ -125,17 +125,17 @@ struct Skybox : public Object {
       : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
     {
         if(!s_shader) {
-            s_shader =
-                new Shader(viewport_vertex_shader, skybox_fragment_shader);
+            s_shader = new Shader("skybox", NULL, viewport_vertex_shader, -1,
+                                  skybox_fragment_shader, -1);
         }
     }
 
-    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    void draw(const Scene &s) override
     {
         s_shader->use();
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
-        s_shader->setMat4("PVinv", glm::inverse(P * V));
+        s_shader->setMat4("PVinv", glm::inverse(s.m_P * s.m_V));
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
@@ -143,7 +143,7 @@ struct Skybox : public Object {
         glDisableVertexAttribArray(0);
     }
 
-    void ui() override { ImGui::Checkbox("Skybox", &m_visible); }
+    void ui(const Scene &s) override { ImGui::Checkbox("Skybox", &m_visible); }
 };
 
 struct Ground : public Object {
@@ -156,20 +156,20 @@ struct Ground : public Object {
       , m_checkersize(checkersize)
     {
         if(!s_shader) {
-            s_shader =
-                new Shader(viewport_vertex_shader, ground_fragment_shader);
+            s_shader = new Shader("ground", NULL, viewport_vertex_shader, -1,
+                                  ground_fragment_shader, -1);
         }
     }
 
-    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    void draw(const Scene &s) override
     {
         s_shader->use();
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
-        s_shader->setVec3("cam", glm::inverse(V)[3]);
-        s_shader->setMat4("PVinv", glm::inverse(P * V));
+        s_shader->setVec3("cam", glm::inverse(s.m_V)[3]);
+        s_shader->setMat4("PVinv", glm::inverse(s.m_P * s.m_V));
         s_shader->setFloat("scale", 0.5f / m_checkersize);
-        s_shader->setMat4("PV", P * V);
+        s_shader->setMat4("PV", s.m_P * s.m_V);
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
@@ -177,7 +177,7 @@ struct Ground : public Object {
         glDisableVertexAttribArray(0);
     }
 
-    void ui() override
+    void ui(const Scene &s) override
     {
         ImGui::Checkbox("Ground", &m_visible);
         ImGui::SliderFloat("CheckerSize", &m_checkersize, 10, 10000, "%.1f",

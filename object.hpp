@@ -3,18 +3,21 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <optional>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "scene.hpp"
 
 namespace g3d {
 
 struct Object {
     virtual ~Object(){};
 
-    virtual void ui() {}
+    virtual void ui(const Scene &s) {}
 
-    virtual void draw(const glm::mat4 &P, const glm::mat4 &V) = 0;
+    virtual void draw(const Scene &s) = 0;
 
     virtual void setColor(const glm::vec4 &) {}
 
@@ -27,7 +30,7 @@ struct Object {
 
     glm::mat4 m_model_matrix{1};
 
-    std::string m_name;
+    std::optional<std::string> m_name;
 
     bool m_visible{true};
 };

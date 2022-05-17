@@ -265,10 +265,10 @@ GLFWImguiScene::prepare()
 
             if(ImGui::CollapsingHeader("Environment")) {
                 if(m_skybox)
-                    m_skybox->ui();
+                    m_skybox->ui(*this);
 
                 if(m_ground)
-                    m_ground->ui();
+                    m_ground->ui(*this);
 
                 ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
             }
@@ -288,9 +288,12 @@ GLFWImguiScene::prepare()
 
     if(ImGui::Begin("Scene")) {
         for(auto &o : m_objects) {
+            if(!o->m_name)
+                continue;
+
             ImGui::PushID((void *)o.get());
-            if(ImGui::CollapsingHeader(o->m_name.c_str())) {
-                o->ui();
+            if(ImGui::CollapsingHeader((*o->m_name).c_str())) {
+                o->ui(*this);
             }
             ImGui::PopID();
         }
@@ -346,7 +349,7 @@ GLFWImguiScene::draw()
     glDisable(GL_BLEND);
 
     if(m_skybox && m_skybox->m_visible)
-        m_skybox->draw(m_P, m_V);
+        m_skybox->draw(*this);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -354,16 +357,16 @@ GLFWImguiScene::draw()
 
     for(auto &o : m_objects) {
         if(o->m_visible)
-            o->draw(m_P, m_V);
+            o->draw(*this);
     }
 
     if(m_ground && m_ground->m_visible)
-        m_ground->draw(m_P, m_V);
+        m_ground->draw(*this);
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     if(m_crosshair->m_visible)
-        m_crosshair->draw(m_P, m_V);
+        m_crosshair->draw(*this);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

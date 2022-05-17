@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <optional>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -24,6 +25,8 @@ struct Scene {
     glm::mat4 m_P{1};
 
     glm::mat4 m_V{1};
+
+    std::optional<glm::vec3> m_lightpos;
 
     virtual glm::vec3 cursorDirection() = 0;
 };

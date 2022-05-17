@@ -5,106 +5,14 @@
 #include "mesh.hpp"
 #include "texture.hpp"
 
-// =================================================================
+#include <glm/gtx/string_cast.hpp>
 
-static const char *mesh_vertex_shader = R"glsl(
-
-layout (location = 0) in vec3 aPos;
-
-#ifdef LIGHTING
-layout (location = 1) in vec3 aNor;
-#endif
-
-#ifdef PER_VERTEX_COLOR
-layout (location = 2) in vec4 aCol;
-#endif
-
-#ifdef TEX0
-layout (location = 3) in vec2 uv0;
-#endif
-
-uniform mat4 PVM;
-
-#ifdef LIGHTING
-uniform mat4 M;
-out vec3 vNormal;
-out vec3 vFragPos;
-#endif
-
-uniform float colorize;
-
-out vec3 vColor;
-
-#ifdef TEX0
-out vec2 vUV0;
-#endif
-
-void main()
-{
-   gl_Position = PVM * vec4(aPos.xyz, 1);
-#ifdef LIGHTING
-   vFragPos = (M * vec4(aPos.xyz, 1)).xyz;
-   vNormal = aNor;
-#endif
-
-#ifdef PER_VERTEX_COLOR
-   vColor = mix(vec3(1,1,1), aCol.xyz, colorize);
-#else
-   vColor = vec3(1,1,1);
-#endif
-
-#ifdef TEX0
-  vUV0 = uv0;
-#endif
-
-}
-
-)glsl";
-
-// =================================================================
-
-static const char *mesh_fragment_shader = R"glsl(
-
-out vec4 FragColor;
-in vec3 vColor;
-
-#ifdef LIGHTING
-in vec3 vFragPos;
-in vec3 vNormal;
-
-uniform vec3 lightPos;
-uniform vec3 lightColor;
-uniform vec3 ambient;
-uniform float normalColorize;
-#endif
-
-#ifdef TEX0
-uniform sampler2D tex0;
-in vec2 vUV0;
-#endif
-
-void main()
-{
-  vec3 col = vColor;
-
-#ifdef TEX0
-  col = col * texture(tex0, vUV0).rgb;
-#endif
-
-#ifdef LIGHTING
-  vec3 lightDir = normalize(lightPos - vFragPos);
-  vec3 diffuse  = max(dot(vNormal, lightDir), 0.0) * lightColor;
-  vec3 result = (ambient + diffuse) * col;
-
-  vec3 ncol = vec3(0.5, 0.5, 0.5) * vNormal + vec3(0.5, 0.5, 0.5);
-  result = mix(result, ncol, normalColorize);
-#else
-  vec3 result = col;
-#endif
-  FragColor = vec4(result, 1.0);
-}
-
-)glsl";
+extern unsigned char phong_vertex_glsl[];
+extern int phong_vertex_glsl_len;
+extern unsigned char phong_geometry_glsl[];
+extern int phong_geometry_glsl_len;
+extern unsigned char phong_fragment_glsl[];
+extern int phong_fragment_glsl_len;
 
 namespace g3d {
 
@@ -123,23 +31,22 @@ struct MeshObject : public Object {
 
         m_name = "Mesh";
 
-        snprintf(hdr, sizeof(hdr),
-                 "#version 330 core\n"
-                 "%s%s%s",
-                 has_normals(m_attr_flags) ? "#define LIGHTING\n" : "",
-                 has_per_vertex_color(m_attr_flags)
-                     ? "#define PER_VERTEX_COLOR\n"
-                     : "",
-                 has_uv0(m_attr_flags) ? "#define TEX0\n" : "");
+        snprintf(
+            hdr, sizeof(hdr),
+            "#version 330 core\n"
+            "%s%s%s",
+            has_normals(m_attr_flags) ? "#define PER_VERTEX_NORMALS\n" : "",
+            has_per_vertex_color(m_attr_flags) ? "#define PER_VERTEX_COLOR\n"
+                                               : "",
+            has_uv0(m_attr_flags) ? "#define TEX0\n" : "");
 
-        std::string vertex_shader(hdr);
-        std::string fragment_shader(hdr);
-
-        vertex_shader += mesh_vertex_shader;
-        fragment_shader += mesh_fragment_shader;
-
-        m_shader = std::make_unique<Shader>(vertex_shader.c_str(),
-                                            fragment_shader.c_str());
+        // clang-format off
+        m_shader = std::make_unique<Shader>("phong",
+            hdr,
+            (const char *)phong_vertex_glsl,   (int)phong_vertex_glsl_len,
+            (const char *)phong_fragment_glsl, (int)phong_fragment_glsl_len,
+            (const char *)phong_geometry_glsl, (int)phong_geometry_glsl_len);
+        // clang-format on
 
         int apv = 3;
 
@@ -154,27 +61,36 @@ struct MeshObject : public Object {
         m_apv = apv;
     }
 
-    void draw(const glm::mat4 &P, const glm::mat4 &V) override
+    void draw(const Scene &scene) override
     {
         m_shader->use();
 
         auto m = glm::translate(m_model_matrix, m_translation);
 
-        m_shader->setMat4("PVM", P * V * m);
+        m_shader->setMat4("PVM", scene.m_P * scene.m_V * m);
 
         if(m_shader->has_uniform("M")) {
             m_shader->setMat4("M", m);
         }
 
         if(has_per_vertex_color(m_attr_flags)) {
-            m_shader->setFloat("colorize", m_colorize);
+            m_shader->setFloat("per_vertex_color_blend", m_colorize);
         }
 
-        if(m_shader->has_uniform("lightPos")) {
-            m_shader->setVec3("lightPos", {-2000, -2000, 2000});
-            m_shader->setVec3("lightColor", glm::vec3{m_lighting});
-            m_shader->setVec3("ambient", glm::vec3{1.0f - m_lighting});
-            m_shader->setFloat("normalColorize", m_normal_colorize);
+        if(scene.m_lightpos) {
+            m_shader->setVec3("lightPos", *scene.m_lightpos);
+            m_shader->setVec3("diffuseColor", m_diffuse);
+            m_shader->setVec3("specularColor", m_specular);
+            m_shader->setVec3("ambientColor", m_ambient);
+        } else {
+            m_shader->setVec3("ambientColor", glm::vec3{1.0f});
+        }
+
+        m_shader->setFloat("normalColorize", m_normal_colorize);
+
+        if(m_shader->has_uniform("viewPos")) {
+            auto V_I = glm::inverse(scene.m_V);
+            m_shader->setVec3("viewPos", glm::vec3{V_I[3]});
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
@@ -237,7 +153,7 @@ struct MeshObject : public Object {
         glDisableVertexAttribArray(2);
     }
 
-    void ui() override
+    void ui(const Scene &s) override
     {
         ImGui::Checkbox("Visible", &m_visible);
         ImGui::Checkbox("Wireframe", &m_wireframe);
@@ -245,10 +161,13 @@ struct MeshObject : public Object {
 
         ImGui::SliderFloat("Color", &m_colorize, 0, 1);
 
-        if(has_normals(m_attr_flags)) {
-            ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
-            ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
+        if(s.m_lightpos) {
+            ImGui::SliderFloat3("Ambient", &m_ambient[0], 0, 1);
+            ImGui::SliderFloat3("Diffuse", &m_ambient[0], 0, 1);
+            ImGui::SliderFloat3("Specular", &m_ambient[0], 0, 1);
         }
+        ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
+
         if(m_elements) {
             ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements / 3);
         }
@@ -266,7 +185,10 @@ struct MeshObject : public Object {
     int m_apv;
     size_t m_vertices;
 
-    float m_lighting{0.75};
+    glm::vec3 m_ambient{1};
+    glm::vec3 m_specular{1};
+    glm::vec3 m_diffuse{1};
+
     float m_colorize{1};
     float m_normal_colorize{0};
 
