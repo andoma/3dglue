@@ -24,6 +24,8 @@ struct MeshObject : public Object {
       , m_elements(data.m_indicies.size())
       , m_drawcount(m_elements / 3)
       , m_tex0(data.m_tex0)
+      , m_apv(data.m_apv)
+      , m_vertices(data.num_vertices())
     {
         char hdr[4096];
 
@@ -45,18 +47,6 @@ struct MeshObject : public Object {
             (const char *)phong_fragment_glsl, (int)phong_fragment_glsl_len,
             (const char *)phong_geometry_glsl, (int)phong_geometry_glsl_len);
         // clang-format on
-
-        int apv = 3;
-
-        if(has_normals(m_attr_flags))
-            apv += 3;
-        if(has_per_vertex_color(m_attr_flags))
-            apv += 4;
-        if(has_uv0(m_attr_flags))
-            apv += 2;
-
-        m_vertices = data.m_attributes.size() / apv;
-        m_apv = apv;
     }
 
     void draw(const Scene &scene) override
@@ -188,8 +178,8 @@ struct MeshObject : public Object {
     const MeshAttributes m_attr_flags;
     const size_t m_elements;
     std::unique_ptr<Shader> m_shader;
-    int m_apv;
-    size_t m_vertices;
+    const int m_apv;
+    const size_t m_vertices;
 
     glm::vec3 m_ambient{1};
     glm::vec3 m_specular{1};
