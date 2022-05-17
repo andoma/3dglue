@@ -214,7 +214,7 @@ struct Mesh {
     }
 
     static std::shared_ptr<Mesh> cube(
-        const glm::vec3 &pos, float size,
+        const glm::vec3 &pos, float size, bool normals,
         const std::shared_ptr<Texture2D> &tex0 = nullptr);
 };
 

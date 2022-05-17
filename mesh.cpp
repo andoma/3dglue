@@ -162,10 +162,11 @@ Mesh::compute_normals()
 }
 
 std::shared_ptr<Mesh>
-Mesh::cube(const glm::vec3 &pos, float s,
+Mesh::cube(const glm::vec3 &pos, float s, bool normals,
            const std::shared_ptr<Texture2D> &tex0)
 {
-    auto md = std::make_shared<Mesh>(MeshAttributes::Normals);
+    auto md = std::make_shared<Mesh>(normals ? MeshAttributes::Normals
+                                             : MeshAttributes::None);
 
     md->m_attributes.resize(8 * md->m_apv);
 
@@ -204,7 +205,8 @@ Mesh::cube(const glm::vec3 &pos, float s,
     md->set_face(10, 3, 2, 1);
     md->set_face(11, 3, 1, 0);
 
-    md->compute_normals();
+    if(normals)
+        md->compute_normals();
 
     if(tex0) {
         md->set_uv0(0, glm::vec2{0, 1});
