@@ -135,6 +135,8 @@ struct PointCloud : public Object {
     {
         char hdr[4096];
 
+        m_name = "Pointcloud";
+
         snprintf(hdr, sizeof(hdr),
                  "#version 330 core\n"
                  "%s%s",
@@ -228,58 +230,51 @@ struct PointCloud : public Object {
 
     void setColor(const glm::vec4 &c) override { m_color = c; }
 
-    void prepare() override
+    void ui() override
     {
-        if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Pointcloud")) {
-            ImGui::Separator();
-            ImGui::PushID("pc");
-            ImGui::Text("%zd points", m_num_points);
-            ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);
+        ImGui::Text("%zd points", m_num_points);
+        ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);
 
-            ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
-            ImGui::Checkbox("Visible", &m_visible);
-            ImGui::Checkbox("Rigid Transform", &m_rigid);
+        ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
+        ImGui::Checkbox("Visible", &m_visible);
+        ImGui::Checkbox("Rigid Transform", &m_rigid);
 
-            if(m_rigid) {
-                ImGui::Text("Translation");
-                ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
-                ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
-                ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
+        if(m_rigid) {
+            ImGui::Text("Translation");
+            ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
+            ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
+            ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
 
-                ImGui::Text("Rotation");
-                ImGui::SliderAngle("X##r", &m_rotation.x);
-                ImGui::SliderAngle("Y##r", &m_rotation.y);
-                ImGui::SliderAngle("Z##r", &m_rotation.z);
+            ImGui::Text("Rotation");
+            ImGui::SliderAngle("X##r", &m_rotation.x);
+            ImGui::SliderAngle("Y##r", &m_rotation.y);
+            ImGui::SliderAngle("Z##r", &m_rotation.z);
 
-                auto m = glm::mat4(1);
-                m = glm::translate(m, m_translation);
-                m = glm::rotate(m, m_rotation.x, {1, 0, 0});
-                m = glm::rotate(m, m_rotation.y, {0, 1, 0});
-                m = glm::rotate(m, m_rotation.z, {0, 0, 1});
-                m_model_matrix = m;
-            }
-
-            ImGui::Checkbox("BoundingBox", &m_bb);
-            if(m_bb) {
-                ImGui::Text("Position");
-                ImGui::SliderFloat("X##c", &m_bbox_center.x, -5000, 5000);
-                ImGui::SliderFloat("Y##c", &m_bbox_center.y, -5000, 5000);
-                ImGui::SliderFloat("Z##c", &m_bbox_center.z, -5000, 5000);
-                ImGui::Text("Size");
-                ImGui::SliderFloat("X##s", &m_bbox_size.x, 1, 5000);
-                ImGui::SliderFloat("Y##s", &m_bbox_size.y, 1, 5000);
-                ImGui::SliderFloat("Z##s", &m_bbox_size.z, 1, 5000);
-            }
-
-            ImGui::Checkbox("TraitRange", &m_trait_on);
-            if(m_trait_on) {
-                ImGui::SliderFloat("Min", &m_trait_min, 0, 1);
-                ImGui::SliderFloat("Max", &m_trait_max, 0, 1);
-            }
-
-            ImGui::PopID();
+            auto m = glm::mat4(1);
+            m = glm::translate(m, m_translation);
+            m = glm::rotate(m, m_rotation.x, {1, 0, 0});
+            m = glm::rotate(m, m_rotation.y, {0, 1, 0});
+            m = glm::rotate(m, m_rotation.z, {0, 0, 1});
+            m_model_matrix = m;
         }
-        ImGui::End();
+
+        ImGui::Checkbox("BoundingBox", &m_bb);
+        if(m_bb) {
+            ImGui::Text("Position");
+            ImGui::SliderFloat("X##c", &m_bbox_center.x, -5000, 5000);
+            ImGui::SliderFloat("Y##c", &m_bbox_center.y, -5000, 5000);
+            ImGui::SliderFloat("Z##c", &m_bbox_center.z, -5000, 5000);
+            ImGui::Text("Size");
+            ImGui::SliderFloat("X##s", &m_bbox_size.x, 1, 5000);
+            ImGui::SliderFloat("Y##s", &m_bbox_size.y, 1, 5000);
+            ImGui::SliderFloat("Z##s", &m_bbox_size.z, 1, 5000);
+        }
+
+        ImGui::Checkbox("TraitRange", &m_trait_on);
+        if(m_trait_on) {
+            ImGui::SliderFloat("Min", &m_trait_min, 0, 1);
+            ImGui::SliderFloat("Max", &m_trait_max, 0, 1);
+        }
     }
 
     ArrayBuffer m_xyz;

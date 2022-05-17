@@ -58,7 +58,7 @@ struct ArcBallCamera : public Camera {
         return V_I[3];
     }
 
-    glm::mat4 compute() override
+    void ui() override
     {
         auto V_I = computeViewInverse();
         auto position = V_I[3];
@@ -71,24 +71,31 @@ struct ArcBallCamera : public Camera {
         glm::vec3 skew;
         glm::vec4 perspective;
 
-        glm::decompose(glm::rotate(view, (float)(M_PI / 2), glm::vec3{1,0,0}),
+        glm::decompose(glm::rotate(view, (float)(M_PI / 2), glm::vec3{1, 0, 0}),
                        scale, orientation, translation, skew, perspective);
 
         auto euler = glm::eulerAngles(orientation) * (float)(180.0f / M_PI);
 
         ImGui::Text("Pivot point");
         ImGui::Indent();
-        ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f",
-                    m_lookat.x, m_lookat.y, m_lookat.z);
+        ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f", m_lookat.x, m_lookat.y,
+                    m_lookat.z);
         ImGui::Unindent();
         ImGui::Text("Camera");
         ImGui::Indent();
-        ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f",
-                    position.x, position.y, position.z);
+        ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f", position.x, position.y,
+                    position.z);
         ImGui::Text("Distance:%9.2f", m_distance);
-        ImGui::Text("Yaw:% 6.1f°  Pitch:% 6.1f°  Roll:% 6.1f°",
-                    euler.x, euler.y, euler.z);
+        ImGui::Text("Yaw:% 6.1f°  Pitch:% 6.1f°  Roll:% 6.1f°", euler.x,
+                    euler.y, euler.z);
         ImGui::Unindent();
+    }
+
+    glm::mat4 compute() override
+    {
+        auto V_I = computeViewInverse();
+        auto view = glm::inverse(V_I);
+
         return view;
     }
 

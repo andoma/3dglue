@@ -42,6 +42,10 @@ struct GLFWImguiScene : public Scene {
     bool m_shift_down{false};
 
     bool m_alt_down{false};
+
+    bool m_scene_editor_visible{true};
+
+    float m_scene_editor_start{0.75};
 };
 
 static void
@@ -223,6 +227,15 @@ GLFWImguiScene::prepare()
 
     ImGui::NewFrame();
 
+    ImGui::SetNextWindowPos(ImVec2(m_width * 0.75f, 0));
+    ImGui::SetNextWindowSize(ImVec2(m_width * 0.25f, m_height));
+
+    m_scene_editor_visible = ImGui::Begin(
+        "Scene", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    ImGui::End();
+
+    m_scene_editor_start = m_scene_editor_visible ? 0.75f : 1.0f;
+
     auto cursor = normalizedCursor();
     auto cursor_delta = cursor - m_cursor_prev;
 
@@ -244,34 +257,45 @@ GLFWImguiScene::prepare()
         }
 
         if(ImGui::Begin("Scene")) {
-            ImGui::SliderFloat("FOV", &m_fov, 1, 180);
+            if(ImGui::CollapsingHeader("Camera")) {
+                ImGui::SliderFloat("FOV", &m_fov, 1, 180);
 
-            auto proj = glm::perspective(
-                glm::radians(m_fov), (float)m_width / m_height, 10.0f, -10.0f);
+                m_camera->ui();
+            }
 
-            m_P = proj;
-            m_V = m_camera->compute();
+            if(ImGui::CollapsingHeader("Environment")) {
+                if(m_skybox)
+                    m_skybox->ui();
 
-            ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
+                if(m_ground)
+                    m_ground->ui();
 
-            if(m_skybox)
-                m_skybox->prepare();
-
-            if(m_ground)
-                m_ground->prepare();
+                ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
+            }
         }
-
         ImGui::End();
+
+        auto proj = glm::perspective(
+            glm::radians(m_fov),
+            (float)m_width * m_scene_editor_start / m_height, 10.0f, -10.0f);
+
+        m_P = proj;
+        m_V = m_camera->compute();
     }
 
     m_crosshair->setModelMatrix(glm::scale(
         glm::translate(glm::mat4{1}, m_camera->lookAt()), {100, 100, 100}));
 
-    for(auto &o : m_objects) {
-        ImGui::PushID((void *)o.get());
-        o->prepare();
-        ImGui::PopID();
+    if(ImGui::Begin("Scene")) {
+        for(auto &o : m_objects) {
+            ImGui::PushID((void *)o.get());
+            if(ImGui::CollapsingHeader(o->m_name.c_str())) {
+                o->ui();
+            }
+            ImGui::PopID();
+        }
     }
+    ImGui::End();
 
     m_cursor_prev = cursor;
 
@@ -287,9 +311,10 @@ GLFWImguiScene::normalizedCursor()
     glfwGetCursorPos(m_window, &mouse_x, &mouse_y);
     glfwGetWindowSize(m_window, &display_w, &display_h);
 
-    auto cursor =
-        (glm::vec2(mouse_x, mouse_y) / glm::vec2(display_w, display_h)) * 2.0f -
-        1.0f;
+    auto cursor = (glm::vec2(mouse_x, mouse_y) /
+                   glm::vec2(display_w * m_scene_editor_start, display_h)) *
+                      2.0f -
+                  1.0f;
     return cursor;
 }
 
@@ -312,7 +337,8 @@ GLFWImguiScene::draw()
 
     int display_w, display_h;
     glfwGetFramebufferSize(m_window, &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
+    glViewport(0, 0, display_w * m_scene_editor_start, display_h);
+
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

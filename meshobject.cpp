@@ -121,6 +121,8 @@ struct MeshObject : public Object {
     {
         char hdr[4096];
 
+        m_name = "Mesh";
+
         snprintf(hdr, sizeof(hdr),
                  "#version 330 core\n"
                  "%s%s%s",
@@ -235,28 +237,25 @@ struct MeshObject : public Object {
         glDisableVertexAttribArray(2);
     }
 
-    void prepare() override
+    void ui() override
     {
-        if(ImGui::Begin(m_name.size() ? m_name.c_str() : "Mesh")) {
-            ImGui::Checkbox("Visible", &m_visible);
-            ImGui::Checkbox("Wireframe", &m_wireframe);
-            ImGui::Checkbox("Backface culling", &m_backface_culling);
+        ImGui::Checkbox("Visible", &m_visible);
+        ImGui::Checkbox("Wireframe", &m_wireframe);
+        ImGui::Checkbox("Backface culling", &m_backface_culling);
 
-            ImGui::SliderFloat("Color", &m_colorize, 0, 1);
+        ImGui::SliderFloat("Color", &m_colorize, 0, 1);
 
-            if(has_normals(m_attr_flags)) {
-                ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
-                ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
-            }
-            if(m_elements) {
-                ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements / 3);
-            }
-            ImGui::Text("Translation");
-            ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
-            ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
-            ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
+        if(has_normals(m_attr_flags)) {
+            ImGui::SliderFloat("Lighting", &m_lighting, 0, 1);
+            ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
         }
-        ImGui::End();
+        if(m_elements) {
+            ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements / 3);
+        }
+        ImGui::Text("Translation");
+        ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
+        ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
+        ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
     }
 
     ArrayBuffer m_attrib_buf;

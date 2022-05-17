@@ -143,7 +143,7 @@ struct Skybox : public Object {
         glDisableVertexAttribArray(0);
     }
 
-    void prepare() override { ImGui::Checkbox("Skybox", &m_visible); }
+    void ui() override { ImGui::Checkbox("Skybox", &m_visible); }
 };
 
 struct Ground : public Object {
@@ -177,7 +177,7 @@ struct Ground : public Object {
         glDisableVertexAttribArray(0);
     }
 
-    void prepare() override
+    void ui() override
     {
         ImGui::Checkbox("Ground", &m_visible);
         ImGui::SliderFloat("CheckerSize", &m_checkersize, 10, 10000, "%.1f",

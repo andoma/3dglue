@@ -12,7 +12,7 @@ namespace g3d {
 struct Object {
     virtual ~Object(){};
 
-    virtual void prepare() {}
+    virtual void ui() {}
 
     virtual void draw(const glm::mat4 &P, const glm::mat4 &V) = 0;
 
