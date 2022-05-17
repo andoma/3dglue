@@ -13,7 +13,7 @@ struct Shader {
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
 
-    Shader(const char *vcode, const char *fcode)
+    Shader(const char *vcode, const char *fcode, const char *gcode = NULL)
     {
         GLint success;
         char err[1024];
@@ -43,6 +43,22 @@ struct Shader {
         m_id = glCreateProgram();
         glAttachShader(m_id, vertex);
         glAttachShader(m_id, fragment);
+
+        if(gcode != NULL) {
+            uint32_t geometry = glCreateShader(GL_GEOMETRY_SHADER);
+            glShaderSource(geometry, 1, &gcode, NULL);
+            glCompileShader(geometry);
+
+            glGetShaderiv(geometry, GL_COMPILE_STATUS, &success);
+            if(!success) {
+                glGetShaderInfoLog(geometry, sizeof(err), NULL, err);
+                fprintf(stderr, "Unable to compile geometry shader:\n%s\n",
+                        err);
+                exit(1);
+            }
+            glAttachShader(m_id, geometry);
+        }
+
         glLinkProgram(m_id);
         glGetProgramiv(m_id, GL_LINK_STATUS, &success);
         if(!success) {
