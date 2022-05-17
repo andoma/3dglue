@@ -7,6 +7,8 @@
 #include <string.h>
 #include <glm/gtx/normal.hpp>
 
+#include "mappedfile.hpp"
+
 namespace g3d {
 
 static void
@@ -221,6 +223,45 @@ Mesh::cube(const glm::vec3 &pos, float s, bool normals,
     }
 
     return md;
+}
+
+std::shared_ptr<Mesh>
+Mesh::loadSTL(const char *path, const glm::mat4 transform)
+{
+    MappedFile f(path);
+    if(f.size() < 84) {
+        fprintf(stderr, "%s: short file\n", path);
+        return nullptr;
+    }
+
+    const uint32_t num_triangles = *(uint32_t *)(f.data() + 80);
+    if(f.size() != 84 + num_triangles * 50) {
+        fprintf(stderr, "%s: incorrect length %zd expected %d\n", path,
+                f.size(), 84 + num_triangles * 50);
+        return nullptr;
+    }
+
+    auto m = std::make_shared<Mesh>(MeshAttributes::None);
+    m->m_attributes.resize(num_triangles * m->m_apv * 3);
+    m->m_indicies.resize(num_triangles * 3);
+
+    const uint8_t *start = f.data() + 84;
+    for(int i = 0; i < num_triangles; i++) {
+        const float *f = (const float *)start;
+        m->set_xyz(i * 3 + 0, transform * glm::vec4{f[1 * 3 + 0], f[1 * 3 + 1],
+                                                    f[1 * 3 + 2], 1});
+        m->set_xyz(i * 3 + 1, transform * glm::vec4{f[2 * 3 + 0], f[2 * 3 + 1],
+                                                    f[2 * 3 + 2], 1});
+        m->set_xyz(i * 3 + 2, transform * glm::vec4{f[3 * 3 + 0], f[3 * 3 + 1],
+                                                    f[3 * 3 + 2], 1});
+        start += 50;
+
+        m->m_indicies[i * 3 + 0] = i * 3 + 0;
+        m->m_indicies[i * 3 + 1] = i * 3 + 1;
+        m->m_indicies[i * 3 + 2] = i * 3 + 2;
+    }
+
+    return m;
 }
 
 }  // namespace g3d

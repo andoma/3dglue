@@ -216,6 +216,9 @@ struct Mesh {
     static std::shared_ptr<Mesh> cube(
         const glm::vec3 &pos, float size, bool normals,
         const std::shared_ptr<Texture2D> &tex0 = nullptr);
+
+    static std::shared_ptr<Mesh> loadSTL(const char *path,
+                                         glm::mat4 transform = glm::mat4{1});
 };
 
 }  // namespace g3d
