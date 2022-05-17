@@ -163,8 +163,8 @@ struct MeshObject : public Object {
 
         if(s.m_lightpos) {
             ImGui::SliderFloat3("Ambient", &m_ambient[0], 0, 1);
-            ImGui::SliderFloat3("Diffuse", &m_ambient[0], 0, 1);
-            ImGui::SliderFloat3("Specular", &m_ambient[0], 0, 1);
+            ImGui::SliderFloat3("Diffuse", &m_diffuse[0], 0, 1);
+            ImGui::SliderFloat3("Specular", &m_specular[0], 0, 1);
         }
         ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
 
@@ -175,6 +175,14 @@ struct MeshObject : public Object {
         ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
         ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
         ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
+    }
+
+    void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
+                  const glm::vec4 &specular) override
+    {
+        m_ambient = ambient;
+        m_diffuse = diffuse;
+        m_specular = specular;
     }
 
     ArrayBuffer m_attrib_buf;

@@ -19,7 +19,10 @@ struct Object {
 
     virtual void draw(const Scene &s) = 0;
 
-    virtual void setColor(const glm::vec4 &) {}
+    virtual void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
+                          const glm::vec4 &specular)
+    {
+    }
 
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 

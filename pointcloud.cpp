@@ -223,7 +223,11 @@ struct PointCloud : public Object {
         }
     }
 
-    void setColor(const glm::vec4 &c) override { m_color = c; }
+    void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
+                  const glm::vec4 &specular) override
+    {
+        m_color = ambient;
+    }
 
     void ui(const Scene &s) override
     {
