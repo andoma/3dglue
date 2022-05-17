@@ -5,8 +5,6 @@
 #include "mesh.hpp"
 #include "texture.hpp"
 
-#include <glm/gtx/string_cast.hpp>
-
 extern unsigned char phong_vertex_glsl[];
 extern int phong_vertex_glsl_len;
 extern unsigned char phong_geometry_glsl[];
