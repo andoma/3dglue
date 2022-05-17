@@ -17,7 +17,7 @@ struct Camera {
 
     virtual ~Camera(){};
 
-    virtual void ui() {};
+    virtual void ui(){};
 
     virtual glm::mat4 compute() = 0;
 

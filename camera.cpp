@@ -38,10 +38,7 @@ struct ArcBallCamera : public Camera {
         m_distance = glm::length(glm::length(position - m_lookat));
     }
 
-    glm::vec3 lookAt() const override
-    {
-        return m_lookat;
-    }
+    glm::vec3 lookAt() const override { return m_lookat; }
 
     glm::mat4 computeViewInverse() const
     {
@@ -173,10 +170,9 @@ struct ArcBallCamera : public Camera {
         char name[PATH_MAX];
         snprintf(name, sizeof(name), ".3dglue/arcballcam%d", slot);
         FILE *fp = fopen(name, "w");
-        fprintf(fp, "%f %f %f %f %f %f %f %f\n",
-                m_distance,
-                m_lookat.x, m_lookat.y, m_lookat.z,
-                m_rotation.x, m_rotation.y, m_rotation.z, m_rotation.w);
+        fprintf(fp, "%f %f %f %f %f %f %f %f\n", m_distance, m_lookat.x,
+                m_lookat.y, m_lookat.z, m_rotation.x, m_rotation.y,
+                m_rotation.z, m_rotation.w);
         fclose(fp);
     }
 
@@ -188,10 +184,9 @@ struct ArcBallCamera : public Camera {
         if(fp == NULL)
             return;
 
-        if(fscanf(fp, "%f %f %f %f %f %f %f %f\n",
-                  &m_distance,
-                  &m_lookat.x, &m_lookat.y, &m_lookat.z,
-                  &m_rotation.x, &m_rotation.y, &m_rotation.z, &m_rotation.w)) {
+        if(fscanf(fp, "%f %f %f %f %f %f %f %f\n", &m_distance, &m_lookat.x,
+                  &m_lookat.y, &m_lookat.z, &m_rotation.x, &m_rotation.y,
+                  &m_rotation.z, &m_rotation.w)) {
         }
         fclose(fp);
     }

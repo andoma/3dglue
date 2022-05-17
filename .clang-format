@@ -1,7 +1,7 @@
 BasedOnStyle: Google
 IndentWidth: 4
 AccessModifierOffset: -4
-IndentCaseLabels: False
+IndentCaseLabels: false
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: true
