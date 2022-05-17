@@ -163,6 +163,28 @@ Mesh::compute_normals()
     }
 }
 
+std::pair<glm::vec3, glm::vec3>
+Mesh::aabb() const
+{
+    glm::vec3 min{INFINITY, INFINITY, INFINITY};
+    glm::vec3 max{-INFINITY, -INFINITY, -INFINITY};
+
+    for(size_t i = 0; i < num_vertices(); i++) {
+        const auto v = get_xyz(i);
+        min = glm::min(v, min);
+        max = glm::max(v, max);
+    }
+    return std::make_pair(min, max);
+}
+
+void
+Mesh::translate(const glm::vec3 &tvec)
+{
+    for(size_t i = 0; i < num_vertices(); i++) {
+        set_xyz(i, get_xyz(i) + tvec);
+    }
+}
+
 std::shared_ptr<Mesh>
 Mesh::cube(const glm::vec3 &pos, float s, bool normals,
            const std::shared_ptr<Texture2D> &tex0)

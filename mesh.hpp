@@ -164,6 +164,10 @@ struct Mesh {
 
     std::vector<uint32_t> m_indicies;
 
+    std::pair<glm::vec3, glm::vec3> aabb() const;
+
+    void translate(const glm::vec3 &tvec);
+
     void compute_normals();
 
     // Inverse mapping point -> triangle
