@@ -8,21 +8,24 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "scene.hpp"
-
 namespace g3d {
+
+struct Camera;
+struct Scene;
 
 struct Object {
     virtual ~Object(){};
 
     virtual void ui(const Scene &s) {}
 
-    virtual void draw(const Scene &s) = 0;
+    virtual void draw(const Scene &s, const Camera &c) = 0;
 
     virtual void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
                           const glm::vec4 &specular)
     {
     }
+
+    virtual void addChild(std::shared_ptr<Object> child) {}
 
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 

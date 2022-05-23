@@ -2,6 +2,7 @@
 
 #include "buffer.hpp"
 #include "shader.hpp"
+#include "camera.hpp"
 
 static const char *pc_vertex_shader = R"glsl(
 layout (location = 0) in vec3 aPos;
@@ -152,11 +153,11 @@ struct PointCloud : public Object {
         }
     }
 
-    void draw(const Scene &scene) override
+    void draw(const Scene &scene, const Camera &cam) override
     {
         Shader *s = m_shader.get();
         s->use();
-        s->setMat4("PV", scene.m_P * scene.m_V);
+        s->setMat4("PV", cam.m_P * cam.m_V);
         s->setMat4("model", m_model_matrix);
         s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
         s->setFloat("alpha", m_alpha);
@@ -204,7 +205,7 @@ struct PointCloud : public Object {
 
         if(m_bb) {
             s_bb_shader->use();
-            s_bb_shader->setMat4("PV", scene.m_P * scene.m_V);
+            s_bb_shader->setMat4("PV", cam.m_P * cam.m_V);
 
             auto m = m_model_matrix;
 
@@ -229,7 +230,7 @@ struct PointCloud : public Object {
         m_color = ambient;
     }
 
-    void ui(const Scene &s) override
+    void ui(const Scene &scene) override
     {
         ImGui::Text("%zd points", m_num_points);
         ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);

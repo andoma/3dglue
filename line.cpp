@@ -2,6 +2,7 @@
 
 #include "shader.hpp"
 #include "buffer.hpp"
+#include "camera.hpp"
 
 static const char *line_vertex_shader = R"glsl(
 #version 330 core
@@ -51,10 +52,10 @@ struct Line : public Object {
         }
     }
 
-    void draw(const Scene &s) override
+    void draw(const Scene &scene, const Camera &cam) override
     {
         s_shader->use();
-        s_shader->setMat4("PV", s.m_P * s.m_V);
+        s_shader->setMat4("PV", cam.m_P * cam.m_V);
         s_shader->setMat4("model", m_model_matrix);
         s_shader->setVec4("col", m_color);
 

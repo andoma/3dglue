@@ -4,6 +4,8 @@
 #include "buffer.hpp"
 #include "mesh.hpp"
 #include "texture.hpp"
+#include "camera.hpp"
+#include "scene.hpp"
 
 extern unsigned char phong_vertex_glsl[];
 extern int phong_vertex_glsl_len;
@@ -49,13 +51,13 @@ struct MeshObject : public Object {
         // clang-format on
     }
 
-    void draw(const Scene &scene) override
+    void draw(const Scene &scene, const Camera &cam) override
     {
         m_shader->use();
 
         auto m = glm::translate(m_model_matrix, m_translation);
 
-        m_shader->setMat4("PVM", scene.m_P * scene.m_V * m);
+        m_shader->setMat4("PVM", cam.m_P * cam.m_V * m);
 
         if(m_shader->has_uniform("M")) {
             m_shader->setMat4("M", m);
@@ -77,8 +79,7 @@ struct MeshObject : public Object {
         m_shader->setFloat("normalColorize", m_normal_colorize);
 
         if(m_shader->has_uniform("viewPos")) {
-            auto V_I = glm::inverse(scene.m_V);
-            m_shader->setVec3("viewPos", glm::vec3{V_I[3]});
+            m_shader->setVec3("viewPos", glm::vec3{cam.m_VI[3]});
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
@@ -141,7 +142,7 @@ struct MeshObject : public Object {
         glDisableVertexAttribArray(2);
     }
 
-    void ui(const Scene &s) override
+    void ui(const Scene &scene) override
     {
         ImGui::Checkbox("Visible", &m_visible);
         ImGui::Checkbox("Wireframe", &m_wireframe);
@@ -149,7 +150,7 @@ struct MeshObject : public Object {
 
         ImGui::SliderFloat("Color", &m_colorize, 0, 1);
 
-        if(s.m_lightpos) {
+        if(scene.m_lightpos) {
             ImGui::SliderFloat3("Ambient", &m_ambient[0], 0, 1);
             ImGui::SliderFloat3("Diffuse", &m_diffuse[0], 0, 1);
             ImGui::SliderFloat3("Specular", &m_specular[0], 0, 1);

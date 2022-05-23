@@ -3,6 +3,7 @@
 #include "opengl.hpp"
 #include "camera.hpp"
 #include "object.hpp"
+#include "image.hpp"
 
 #include <glm/gtx/string_cast.hpp>
 
@@ -19,6 +20,8 @@ struct GLFWImguiScene : public Scene {
 
     void draw() override;
 
+    void save_frame(void);
+
     glm::vec2 normalizedCursor();
 
     GLFWwindow *m_window;
@@ -26,8 +29,6 @@ struct GLFWImguiScene : public Scene {
     int m_height;
 
     GLuint m_vao;
-
-    float m_fov{45};
 
     std::shared_ptr<Object> m_crosshair;
     std::shared_ptr<Object> m_skybox;
@@ -46,7 +47,28 @@ struct GLFWImguiScene : public Scene {
     bool m_scene_editor_visible{true};
 
     float m_scene_editor_start{0.75};
+
+    std::unique_ptr<Image2D> m_copy;
+    int m_frame_cnt{0};
+
+    bool m_record{false};
 };
+
+void
+GLFWImguiScene::save_frame(void)
+{
+    if(m_copy == NULL || m_width != m_copy->m_width ||
+       m_height != m_copy->m_height) {
+        m_copy = std::make_unique<Image2D>(m_width, m_height);
+    }
+    glReadPixels(0, 0, m_copy->m_width, m_copy->m_height, GL_RGB,
+                 GL_UNSIGNED_BYTE, m_copy->m_data);
+
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "save/frame-%04d.jpeg", m_frame_cnt);
+    m_copy->save_jpeg(path, 95, true);
+    m_frame_cnt++;
+}
 
 static void
 glfw_error_callback(int error, const char *description)
@@ -257,9 +279,9 @@ GLFWImguiScene::prepare()
         }
 
         if(ImGui::Begin("Scene")) {
-            if(ImGui::CollapsingHeader("Camera")) {
-                ImGui::SliderFloat("FOV", &m_fov, 1, 180);
+            ImGui::Checkbox("Record", &m_record);
 
+            if(ImGui::CollapsingHeader("Camera")) {
                 m_camera->ui();
             }
 
@@ -274,13 +296,7 @@ GLFWImguiScene::prepare()
             }
         }
         ImGui::End();
-
-        auto proj = glm::perspective(
-            glm::radians(m_fov),
-            (float)m_width * m_scene_editor_start / m_height, 10.0f, -10.0f);
-
-        m_P = proj;
-        m_V = m_camera->compute();
+        m_camera->update(m_width * m_scene_editor_start, m_height);
     }
 
     m_crosshair->setModelMatrix(glm::scale(
@@ -292,6 +308,7 @@ GLFWImguiScene::prepare()
                 continue;
 
             ImGui::PushID((void *)o.get());
+            ImGui::SetNextItemOpen(true, ImGuiCond_Once);
             if(ImGui::CollapsingHeader((*o->m_name).c_str())) {
                 o->ui(*this);
             }
@@ -324,11 +341,14 @@ GLFWImguiScene::normalizedCursor()
 glm::vec3
 GLFWImguiScene::cursorDirection()
 {
+#if 0
     auto cursor = normalizedCursor();
 
     auto ray =
         glm::inverse(m_P * m_V) * glm::vec4(cursor.x, -cursor.y, 0, 1.0f);
     return glm::normalize(glm::vec3(ray));
+#endif
+    return glm::vec3{0};
 }
 
 void
@@ -349,7 +369,7 @@ GLFWImguiScene::draw()
     glDisable(GL_BLEND);
 
     if(m_skybox && m_skybox->m_visible)
-        m_skybox->draw(*this);
+        m_skybox->draw(*this, *m_camera);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -357,21 +377,24 @@ GLFWImguiScene::draw()
 
     for(auto &o : m_objects) {
         if(o->m_visible)
-            o->draw(*this);
+            o->draw(*this, *m_camera);
     }
 
     if(m_ground && m_ground->m_visible)
-        m_ground->draw(*this);
+        m_ground->draw(*this, *m_camera);
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     if(m_crosshair->m_visible)
-        m_crosshair->draw(*this);
+        m_crosshair->draw(*this, *m_camera);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwMakeContextCurrent(m_window);
     glfwSwapBuffers(m_window);
+
+    if(m_record)
+        save_frame();
 }
 
 std::shared_ptr<Scene>

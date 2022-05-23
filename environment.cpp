@@ -2,6 +2,7 @@
 
 #include "shader.hpp"
 #include "buffer.hpp"
+#include "camera.hpp"
 
 static const char *viewport_vertex_shader = R"glsl(
 #version 330 core
@@ -73,6 +74,7 @@ float checkerboard(vec2 p,float size){
 void main()
 {
   vec4 p = PVinv * vec4(coord, 0, 1);
+
   vec3 dir = normalize(p.xyz);
 
   vec3 ground = vec3(0, 0, -1);
@@ -92,6 +94,8 @@ void main()
     float ndc_depth = clip_space_pos.z / clip_space_pos.w;
     depth = (((far-near) * ndc_depth) + near + far) / 2.0;
 
+    depth = min(0.9999999, depth);
+
     float fog = max(1 - (t * scale * 0.01), 0);
 
     const float c0 = 0.1;
@@ -99,7 +103,7 @@ void main()
 
     float c = mix(c0, c1, checkerboard(floorpoint.xy, scale));
     c = mix((c0 + c1) * 0.5, c, fog);
-    col = vec4(1,1,1, c);
+    col = vec4(1,1,1,c);
   }
 
   FragColor = col;
@@ -130,12 +134,14 @@ struct Skybox : public Object {
         }
     }
 
-    void draw(const Scene &s) override
+    void draw(const Scene &scene, const Camera &cam) override
     {
         s_shader->use();
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
-        s_shader->setMat4("PVinv", glm::inverse(s.m_P * s.m_V));
+        auto p = cam.m_P;
+        p[2].z = 0;
+        s_shader->setMat4("PVinv", glm::inverse(p * cam.m_V));
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
@@ -143,7 +149,10 @@ struct Skybox : public Object {
         glDisableVertexAttribArray(0);
     }
 
-    void ui(const Scene &s) override { ImGui::Checkbox("Skybox", &m_visible); }
+    void ui(const Scene &scene) override
+    {
+        ImGui::Checkbox("Skybox", &m_visible);
+    }
 };
 
 struct Ground : public Object {
@@ -161,15 +170,18 @@ struct Ground : public Object {
         }
     }
 
-    void draw(const Scene &s) override
+    void draw(const Scene &s, const Camera &cam) override
     {
         s_shader->use();
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
-        s_shader->setVec3("cam", glm::inverse(s.m_V)[3]);
-        s_shader->setMat4("PVinv", glm::inverse(s.m_P * s.m_V));
+        s_shader->setVec3("cam", cam.m_VI[3]);
+        auto p = cam.m_P;
+        p[2].z = 0;
+
+        s_shader->setMat4("PVinv", glm::inverse(p * cam.m_V));
         s_shader->setFloat("scale", 0.5f / m_checkersize);
-        s_shader->setMat4("PV", s.m_P * s.m_V);
+        s_shader->setMat4("PV", cam.m_P * cam.m_V);
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
@@ -177,7 +189,7 @@ struct Ground : public Object {
         glDisableVertexAttribArray(0);
     }
 
-    void ui(const Scene &s) override
+    void ui(const Scene &scene) override
     {
         ImGui::Checkbox("Ground", &m_visible);
         ImGui::SliderFloat("CheckerSize", &m_checkersize, 10, 10000, "%.1f",

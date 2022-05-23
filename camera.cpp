@@ -13,10 +13,32 @@
 
 namespace g3d {
 
-struct ArcBallCamera : public Camera {
-    ArcBallCamera(glm::vec3 lookat, glm::vec3 position,
-                  const std::map<std::string, glm::mat4> &presets)
-      : m_lookat(lookat), m_presets(presets)
+struct PerspectiveCamera : public Camera {
+    PerspectiveCamera(float fov, float znear, float zfar)
+      : m_fov(fov), m_znear(znear), m_zfar(zfar)
+    {
+    }
+
+    virtual void ui() override { ImGui::SliderFloat("FOV", &m_fov, 1, 180); }
+
+    virtual void update(float viewport_width, float viewport_height) override
+    {
+        m_P =
+            glm::perspective(glm::radians(m_fov),
+                             viewport_width / viewport_height, m_znear, m_zfar);
+    }
+
+    float m_fov;
+    const float m_znear;
+    const float m_zfar;
+};
+
+struct ArcBallCamera : public PerspectiveCamera {
+    ArcBallCamera(glm::vec3 lookat, glm::vec3 position, float fov, float znear,
+                  float zfar, const std::map<std::string, glm::mat4> &presets)
+      : PerspectiveCamera(fov, znear, zfar)
+      , m_lookat(lookat)
+      , m_presets(presets)
     {
         init_from_position(position);
     }
@@ -36,31 +58,25 @@ struct ArcBallCamera : public Camera {
 
         m_rotation = orientation;
         m_distance = glm::length(glm::length(position - m_lookat));
+
+        compute_view();
     }
 
     glm::vec3 lookAt() const override { return m_lookat; }
 
-    glm::mat4 computeViewInverse() const
+    void compute_view(void)
     {
         auto T0 = glm::translate(glm::mat4(1.0f), glm::vec3{0, 0, m_distance});
         auto R = glm::mat4_cast(m_rotation);
         auto T1 = glm::translate(glm::mat4(1.0f), m_lookat);
-        auto V = T1 * R * T0;
-        return V;
-    }
 
-    glm::vec3 position() const override
-    {
-        auto V_I = computeViewInverse();
-        return V_I[3];
+        m_VI = T1 * R * T0;
+        m_V = glm::inverse(m_VI);
     }
 
     void ui() override
     {
-        auto V_I = computeViewInverse();
-        auto position = V_I[3];
-
-        auto view = glm::inverse(V_I);
+        auto position = m_VI[3];
 
         glm::vec3 scale;
         glm::quat orientation;
@@ -68,7 +84,7 @@ struct ArcBallCamera : public Camera {
         glm::vec3 skew;
         glm::vec4 perspective;
 
-        glm::decompose(glm::rotate(view, (float)(M_PI / 2), glm::vec3{1, 0, 0}),
+        glm::decompose(glm::rotate(m_V, (float)(M_PI / 2), glm::vec3{1, 0, 0}),
                        scale, orientation, translation, skew, perspective);
 
         auto euler = glm::eulerAngles(orientation) * (float)(180.0f / M_PI);
@@ -85,15 +101,19 @@ struct ArcBallCamera : public Camera {
         ImGui::Text("Distance:%9.2f", m_distance);
         ImGui::Text("Yaw:% 6.1f°  Pitch:% 6.1f°  Roll:% 6.1f°", euler.x,
                     euler.y, euler.z);
+        ImGui::Checkbox("AutoRotate", &m_autorotate);
         ImGui::Unindent();
     }
 
-    glm::mat4 compute() override
+    void update(float viewport_width, float viewport_height) override
     {
-        auto V_I = computeViewInverse();
-        auto view = glm::inverse(V_I);
-
-        return view;
+        if(m_autorotate) {
+            auto q =
+                glm::angleAxis(glm::radians(0.5f), glm::vec3(0.f, 1.0f, 0.f));
+            m_rotation *= q;
+        }
+        PerspectiveCamera::update(viewport_width, viewport_height);
+        compute_view();
     }
 
     void uiInput(Control c, const glm::vec2 &xy) override
@@ -194,15 +214,43 @@ struct ArcBallCamera : public Camera {
     glm::vec3 m_lookat;
     glm::quat m_rotation;
     float m_distance;
-
+    bool m_autorotate{false};
     const std::map<std::string, glm::mat4> m_presets;
 };
 
 std::shared_ptr<Camera>
-makeArcBallCamera(glm::vec3 lookat, glm::vec3 position,
-                  const std::map<std::string, glm::mat4> &presets)
+makeArcBallCamera(glm::vec3 lookat, glm::vec3 position, float fov, float znear,
+                  float zfar, const std::map<std::string, glm::mat4> &presets)
 {
-    return std::make_shared<ArcBallCamera>(lookat, position, presets);
+    return std::make_shared<ArcBallCamera>(lookat, position, fov, znear, zfar,
+                                           presets);
+}
+
+struct FixedCamera : public PerspectiveCamera {
+    FixedCamera(const glm::mat4 &extr_matrix, float fov, float znear,
+                float zfar)
+      : PerspectiveCamera(fov, znear, zfar)
+    {
+        m_VI = extr_matrix;
+        m_V = glm::inverse(extr_matrix);
+    }
+
+    glm::vec3 lookAt() const override { return glm::vec3{0}; }
+};
+
+std::shared_ptr<Camera>
+makeFixedCamera(const glm::mat4 &extr_matrix, float fov, float znear,
+                float zfar)
+{
+    return std::make_shared<FixedCamera>(extr_matrix, fov, znear, zfar);
+}
+
+std::shared_ptr<Camera>
+makeFixedCamera(const glm::vec3 &eye, const glm::vec3 &center,
+                const glm::vec3 &up, float fov, float znear, float zfar)
+{
+    return std::make_shared<FixedCamera>(
+        glm::inverse(glm::lookAt(eye, center, up)), fov, znear, zfar);
 }
 
 }  // namespace g3d
