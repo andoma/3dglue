@@ -221,6 +221,9 @@ struct Mesh {
         const glm::vec3 &pos, float size, bool normals,
         const std::shared_ptr<Texture2D> &tex0 = nullptr);
 
+    static std::shared_ptr<Mesh> loadOBJ(const char *path,
+                                         glm::mat4 transform = glm::mat4{1});
+
     static std::shared_ptr<Mesh> loadSTL(const char *path,
                                          glm::mat4 transform = glm::mat4{1});
 };

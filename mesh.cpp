@@ -248,6 +248,35 @@ Mesh::cube(const glm::vec3 &pos, float s, bool normals,
 }
 
 std::shared_ptr<Mesh>
+Mesh::loadOBJ(const char *path, const glm::mat4 transform)
+{
+    FILE *fp = fopen(path, "r");
+    if(fp == NULL)
+        return nullptr;
+
+    auto m = std::make_shared<Mesh>(MeshAttributes::None);
+
+    while(!feof(fp)) {
+        double a, b, c;
+        char x;
+        if(fscanf(fp, "%c %lf %lf %lf\n", &x, &a, &b, &c) == 4) {
+            if(x == 'v') {
+                auto v = transform * glm::vec4{a, b, c, 1};
+                m->m_attributes.push_back(v.x);
+                m->m_attributes.push_back(v.y);
+                m->m_attributes.push_back(v.z);
+            } else if(x == 'f') {
+                m->m_indicies.push_back(a - 1);
+                m->m_indicies.push_back(b - 1);
+                m->m_indicies.push_back(c - 1);
+            }
+        }
+    }
+    fclose(fp);
+    return m;
+}
+
+std::shared_ptr<Mesh>
 Mesh::loadSTL(const char *path, const glm::mat4 transform)
 {
     MappedFile f(path);
