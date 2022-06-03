@@ -6,29 +6,28 @@
 #include <sys/stat.h>
 #include <stdio.h>
 
+#include <system_error>
+
 namespace g3d {
 
 MappedFile::MappedFile(const char *path) : m_data(NULL), m_size(0)
 {
     int fd = open(path, O_RDONLY);
     if(fd == -1) {
-        fprintf(stderr, "Unable to open %s -- %m\n", path);
-        return;
+        throw std::system_error(errno, std::system_category());
     }
     struct stat st;
     if(fstat(fd, &st) == -1) {
-        fprintf(stderr, "Unable to stat %s -- %m\n", path);
+        int e = errno;
         close(fd);
-        return;
+        throw std::system_error(errno, std::system_category());
     }
 
     void *p = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
 
     if(p == MAP_FAILED) {
-        fprintf(stderr, "Unable to mmap %s -- %m\n", path);
-        close(fd);
-        return;
+        throw std::system_error(errno, std::system_category());
     }
 
     m_size = st.st_size;
