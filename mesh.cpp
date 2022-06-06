@@ -296,7 +296,7 @@ Mesh::loadSTL(const char *path, const glm::mat4 transform)
     m->m_attributes.resize(num_triangles * m->m_apv * 3);
 
     const uint8_t *start = f.data() + 84;
-    for(int i = 0; i < num_triangles; i++) {
+    for(uint32_t i = 0; i < num_triangles; i++) {
         const float *f = (const float *)start;
         m->set_xyz(i * 3 + 0, transform * glm::vec4{f[1 * 3 + 0], f[1 * 3 + 1],
                                                     f[1 * 3 + 2], 1});

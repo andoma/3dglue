@@ -25,8 +25,8 @@ struct GLFWImguiScene : public Scene {
     glm::vec2 normalizedCursor();
 
     GLFWwindow *m_window;
-    int m_width;
-    int m_height;
+    unsigned int m_width;
+    unsigned int m_height;
 
     GLuint m_vao;
 
