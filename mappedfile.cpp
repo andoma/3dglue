@@ -20,14 +20,15 @@ MappedFile::MappedFile(const char *path) : m_data(NULL), m_size(0)
     if(fstat(fd, &st) == -1) {
         int e = errno;
         close(fd);
-        throw std::system_error(errno, std::system_category());
+        throw std::system_error(e, std::system_category());
     }
 
     void *p = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    int e = errno;
     close(fd);
 
     if(p == MAP_FAILED) {
-        throw std::system_error(errno, std::system_category());
+        throw std::system_error(e, std::system_category());
     }
 
     m_size = st.st_size;
