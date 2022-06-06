@@ -20,8 +20,9 @@ struct Object {
 
     virtual void draw(const Scene &s, const Camera &c) = 0;
 
-    virtual void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
-                          const glm::vec4 &specular)
+    virtual void setColor(const glm::vec4 &ambient,
+                          const glm::vec4 &diffuse = glm::vec4{0},
+                          const glm::vec4 &specular = glm::vec4{0})
     {
     }
 
