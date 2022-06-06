@@ -162,12 +162,13 @@ struct PointCloud : public Object {
         s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
         s->setFloat("alpha", m_alpha);
 
-        if(m_trait_on) {
-            s->setVec2("trait_minmax", glm::vec2{m_trait_min, m_trait_max});
-        } else {
-            s->setVec2("trait_minmax", glm::vec2{-INFINITY, INFINITY});
+        if(m_traited) {
+            if(m_trait_on) {
+                s->setVec2("trait_minmax", glm::vec2{m_trait_min, m_trait_max});
+            } else {
+                s->setVec2("trait_minmax", glm::vec2{-INFINITY, INFINITY});
+            }
         }
-
         if(m_bb) {
             s->setVec3("bbox1", m_bbox_center - m_bbox_size * 0.5f);
             s->setVec3("bbox2", m_bbox_center + m_bbox_size * 0.5f);
