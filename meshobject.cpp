@@ -25,9 +25,9 @@ struct MeshObject : public Object {
       , m_attr_flags(data.m_attr_flags)
       , m_elements(data.m_indicies.size())
       , m_drawcount(m_elements / 3)
-      , m_tex0(data.m_tex0)
       , m_apv(data.m_apv)
       , m_vertices(data.num_vertices())
+      , m_tex0(data.m_tex0)
     {
         char hdr[4096];
 
@@ -179,6 +179,7 @@ struct MeshObject : public Object {
     const MeshAttributes m_attr_flags;
     const size_t m_elements;
     std::unique_ptr<Shader> m_shader;
+    int m_drawcount{0};
     const int m_apv;
     const size_t m_vertices;
 
@@ -189,7 +190,6 @@ struct MeshObject : public Object {
     float m_colorize{1};
     float m_normal_colorize{0};
 
-    int m_drawcount{0};
     bool m_wireframe{false};
     bool m_backface_culling{true};
 
