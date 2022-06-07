@@ -28,6 +28,7 @@ struct Scene {
 };
 
 std::shared_ptr<Scene> makeGLFWImguiScene(const char *title, int width,
-                                          int height);
+                                          int height,
+                                          float ground_checker_size = 1000);
 
 }  // namespace g3d

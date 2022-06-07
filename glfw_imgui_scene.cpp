@@ -10,7 +10,7 @@
 namespace g3d {
 
 struct GLFWImguiScene : public Scene {
-    GLFWImguiScene(const char *title, int width, int height);
+    GLFWImguiScene(const char *title, int width, int height, float ground_size);
 
     glm::vec3 cursorDirection() override;
 
@@ -173,7 +173,8 @@ CharCallback(GLFWwindow *window, unsigned int c)
     ImGui_ImplGlfw_CharCallback(window, c);
 }
 
-GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
+GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height,
+                               float ground_size)
   : m_width(width), m_height(height)
 {
     glfwSetErrorCallback(glfw_error_callback);
@@ -225,7 +226,8 @@ GLFWImguiScene::GLFWImguiScene(const char *title, int width, int height)
 
     m_skybox = makeSkybox();
 
-    m_ground = makeGround(1000);
+    if(ground_size)
+        m_ground = makeGround(ground_size);
 }
 
 GLFWImguiScene::~GLFWImguiScene()
@@ -400,9 +402,9 @@ GLFWImguiScene::draw()
 }
 
 std::shared_ptr<Scene>
-makeGLFWImguiScene(const char *title, int width, int height)
+makeGLFWImguiScene(const char *title, int width, int height, float ground_size)
 {
-    return std::make_shared<GLFWImguiScene>(title, width, height);
+    return std::make_shared<GLFWImguiScene>(title, width, height, ground_size);
 }
 
 }  // namespace g3d
