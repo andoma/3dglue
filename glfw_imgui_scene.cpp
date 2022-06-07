@@ -44,6 +44,8 @@ struct GLFWImguiScene : public Scene {
 
     bool m_alt_down{false};
 
+    bool m_ctrl_down{false};
+
     bool m_scene_editor_visible{true};
 
     float m_scene_editor_start{0.75};
@@ -134,12 +136,16 @@ KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     GLFWImguiScene *s = (GLFWImguiScene *)glfwGetWindowUserPointer(window);
 
-    if(key == GLFW_KEY_LEFT_SHIFT) {
+    if(key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
         s->m_shift_down = action == GLFW_PRESS;
     }
 
-    if(key == GLFW_KEY_LEFT_ALT) {
+    if(key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT) {
         s->m_alt_down = action == GLFW_PRESS;
+    }
+
+    if(key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL) {
+        s->m_ctrl_down = action == GLFW_PRESS;
     }
 
     if(s->m_camera != NULL) {
@@ -265,7 +271,7 @@ GLFWImguiScene::prepare()
 
     if(m_camera != NULL) {
         if(m_left_down) {
-            if(m_alt_down) {
+            if(m_ctrl_down) {
                 m_camera->uiInput(Camera::Control::DRAG3, cursor_delta);
             } else if(m_shift_down) {
                 m_camera->uiInput(Camera::Control::DRAG2, cursor_delta);
