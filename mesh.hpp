@@ -168,6 +168,8 @@ struct Mesh {
 
     void translate(const glm::vec3 &tvec);
 
+    void transform(const glm::mat4 &mtx);
+
     void compute_normals();
 
     // Inverse mapping point -> triangle
@@ -217,9 +219,16 @@ struct Mesh {
         return m_inverse_index[v] & INVERSE_INDEX_COUNT_MASK;
     }
 
-    static std::shared_ptr<Mesh> cube(
-        const glm::vec3 &pos, float size, bool normals,
+    static std::shared_ptr<Mesh> cuboid(
+        const glm::vec3 &pos, const glm::vec3 &size, bool normals = false,
         const std::shared_ptr<Texture2D> &tex0 = nullptr);
+
+    static std::shared_ptr<Mesh> cube(
+        const glm::vec3 &pos, float size, bool normals = false,
+        const std::shared_ptr<Texture2D> &tex0 = nullptr)
+    {
+        return cuboid(pos, glm::vec3{size}, normals, tex0);
+    }
 
     static std::shared_ptr<Mesh> loadOBJ(const char *path,
                                          glm::mat4 transform = glm::mat4{1});

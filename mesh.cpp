@@ -185,23 +185,37 @@ Mesh::translate(const glm::vec3 &tvec)
     }
 }
 
+void
+Mesh::transform(const glm::mat4 &mtx)
+{
+    for(size_t i = 0; i < num_vertices(); i++) {
+        auto v =
+            glm::vec4(m_attributes[i * m_apv + 0], m_attributes[i * m_apv + 1],
+                      m_attributes[i * m_apv + 2], 1.0f);
+
+        set_xyz(i, mtx * v);
+    }
+}
+
 std::shared_ptr<Mesh>
-Mesh::cube(const glm::vec3 &pos, float s, bool normals,
-           const std::shared_ptr<Texture2D> &tex0)
+Mesh::cuboid(const glm::vec3 &pos, const glm::vec3 &size, bool normals,
+             const std::shared_ptr<Texture2D> &tex0)
 {
     auto md = std::make_shared<Mesh>(normals ? MeshAttributes::Normals
                                              : MeshAttributes::None);
 
     md->m_attributes.resize(8 * md->m_apv);
 
-    md->set_xyz(0, pos + glm::vec3{-s, -s, -s});
-    md->set_xyz(1, pos + glm::vec3{s, -s, -s});
-    md->set_xyz(2, pos + glm::vec3{s, s, -s});
-    md->set_xyz(3, pos + glm::vec3{-s, s, -s});
-    md->set_xyz(4, pos + glm::vec3{-s, -s, s});
-    md->set_xyz(5, pos + glm::vec3{s, -s, s});
-    md->set_xyz(6, pos + glm::vec3{s, s, s});
-    md->set_xyz(7, pos + glm::vec3{-s, s, s});
+    const auto hs = size * 0.5f;
+
+    md->set_xyz(0, pos + glm::vec3{-hs.x, -hs.y, -hs.z});
+    md->set_xyz(1, pos + glm::vec3{hs.x, -hs.y, -hs.z});
+    md->set_xyz(2, pos + glm::vec3{hs.x, hs.y, -hs.z});
+    md->set_xyz(3, pos + glm::vec3{-hs.x, hs.y, -hs.z});
+    md->set_xyz(4, pos + glm::vec3{-hs.x, -hs.y, hs.z});
+    md->set_xyz(5, pos + glm::vec3{hs.x, -hs.y, hs.z});
+    md->set_xyz(6, pos + glm::vec3{hs.x, hs.y, hs.z});
+    md->set_xyz(7, pos + glm::vec3{-hs.x, hs.y, hs.z});
 
     md->m_indicies.resize(12 * 3);
 

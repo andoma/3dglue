@@ -17,7 +17,7 @@ extern int phong_fragment_glsl_len;
 namespace g3d {
 
 struct MeshObject : public Object {
-    MeshObject(const Mesh &data)
+    MeshObject(const Mesh &data, float normal_colorize)
       : m_attrib_buf(&data.m_attributes[0],
                      data.m_attributes.size() * sizeof(float), GL_ARRAY_BUFFER)
       , m_index_buf(&data.m_indicies[0], data.m_indicies.size() * sizeof(float),
@@ -27,6 +27,7 @@ struct MeshObject : public Object {
       , m_drawcount(m_elements / 3)
       , m_apv(data.m_apv)
       , m_vertices(data.num_vertices())
+      , m_normal_colorize(normal_colorize)
       , m_tex0(data.m_tex0)
     {
         char hdr[4096];
@@ -188,7 +189,7 @@ struct MeshObject : public Object {
     glm::vec3 m_diffuse{1};
 
     float m_colorize{1};
-    float m_normal_colorize{0};
+    float m_normal_colorize;
 
     bool m_wireframe{false};
     bool m_backface_culling{true};
@@ -199,9 +200,9 @@ struct MeshObject : public Object {
 };
 
 std::shared_ptr<Object>
-makeMeshObject(const Mesh &data)
+makeMeshObject(const Mesh &data, float normal_color_blend)
 {
-    return std::make_shared<MeshObject>(data);
+    return std::make_shared<MeshObject>(data, normal_color_blend);
 }
 
 }  // namespace g3d

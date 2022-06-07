@@ -50,7 +50,8 @@ std::shared_ptr<Object> makeCross();
 
 struct Mesh;
 
-std::shared_ptr<Object> makeMeshObject(const Mesh &data);
+std::shared_ptr<Object> makeMeshObject(const Mesh &data,
+                                       float normal_color_blend = 0.0f);
 
 std::shared_ptr<Object> makeSkybox();
 
