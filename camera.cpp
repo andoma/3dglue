@@ -116,6 +116,8 @@ struct ArcBallCamera : public PerspectiveCamera {
         compute_view();
     }
 
+    float distance() const override { return m_distance; }
+
     void uiInput(Control c, const glm::vec2 &xy) override
     {
         glm::quat q;
@@ -236,6 +238,8 @@ struct FixedCamera : public PerspectiveCamera {
     }
 
     glm::vec3 lookAt() const override { return glm::vec3{0}; }
+
+    float distance() const override { return NAN; }
 };
 
 std::shared_ptr<Camera>

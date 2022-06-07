@@ -21,6 +21,8 @@ struct Camera {
 
     virtual void update(float viewport_width, float viewport_height) = 0;
 
+    virtual float distance() const = 0;
+
     virtual glm::vec3 lookAt() const = 0;
 
     glm::vec3 position() const { return m_VI[3]; }

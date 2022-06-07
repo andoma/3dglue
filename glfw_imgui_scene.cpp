@@ -299,8 +299,10 @@ GLFWImguiScene::prepare()
         m_camera->update(m_width * m_scene_editor_start, m_height);
     }
 
+    float ch_size = m_camera->distance() * 0.025f;
+
     m_crosshair->setModelMatrix(glm::scale(
-        glm::translate(glm::mat4{1}, m_camera->lookAt()), {100, 100, 100}));
+        glm::translate(glm::mat4{1}, m_camera->lookAt()), glm::vec3{ch_size}));
 
     if(ImGui::Begin("Scene")) {
         for(auto &o : m_objects) {
