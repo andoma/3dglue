@@ -76,6 +76,8 @@ struct ArcBallCamera : public PerspectiveCamera {
 
     void ui() override
     {
+        PerspectiveCamera::ui();
+
         auto position = m_VI[3];
 
         glm::vec3 scale;
