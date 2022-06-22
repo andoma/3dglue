@@ -38,13 +38,15 @@ void main()
 
 namespace g3d {
 
-struct Line : public Object {
+struct LineStrip : public Object {
     inline static Shader *s_shader;
 
     ArrayBuffer m_attrib_buf;
-    Line(const glm::vec3 segment[2])
-      : m_attrib_buf((void *)&segment[0][0], sizeof(glm::vec3) * 2,
+    LineStrip(const std::vector<glm::vec3> strip, GLenum mode)
+      : m_attrib_buf((void *)&strip[0][0], sizeof(glm::vec3) * strip.size(),
                      GL_ARRAY_BUFFER)
+      , m_count(strip.size())
+      , m_mode(mode)
     {
         if(!s_shader) {
             s_shader = new Shader("line", NULL, line_vertex_shader, -1,
@@ -62,7 +64,7 @@ struct Line : public Object {
         glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void *)NULL);
-        glDrawArrays(GL_LINES, 0, 2);
+        glDrawArrays(m_mode, 0, m_count);
         glDisableVertexAttribArray(0);
     }
 
@@ -73,12 +75,27 @@ struct Line : public Object {
     }
 
     glm::vec4 m_color{1};
+    const size_t m_count;
+    const GLenum m_mode;
 };
 
 std::shared_ptr<Object>
 makeLine(const glm::vec3 segment[2])
 {
-    return std::make_shared<Line>(segment);
+    std::vector<glm::vec3> lines{segment[0], segment[1]};
+    return std::make_shared<LineStrip>(lines, GL_LINES);
+}
+
+std::shared_ptr<Object>
+makeLineStrip(const std::vector<glm::vec3> &linestrip)
+{
+    return std::make_shared<LineStrip>(linestrip, GL_LINE_STRIP);
+}
+
+std::shared_ptr<Object>
+makeLines(const std::vector<glm::vec3> &lines)
+{
+    return std::make_shared<LineStrip>(lines, GL_LINES);
 }
 
 }  // namespace g3d

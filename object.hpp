@@ -59,4 +59,8 @@ std::shared_ptr<Object> makeGround(float checkersize);
 
 std::shared_ptr<Object> makeLine(const glm::vec3 segment[2]);
 
+std::shared_ptr<Object> makeLines(const std::vector<glm::vec3> &lines);
+
+std::shared_ptr<Object> makeLineStrip(const std::vector<glm::vec3> &lines);
+
 }  // namespace g3d
