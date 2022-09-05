@@ -28,6 +28,8 @@ struct Object {
 
     virtual void addChild(std::shared_ptr<Object> child) {}
 
+    virtual void update(const float *attributes, size_t length) {}
+
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 
     void setModelMatrixScale(float scale)
