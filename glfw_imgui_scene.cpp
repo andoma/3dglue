@@ -5,6 +5,8 @@
 #include "object.hpp"
 #include "image.hpp"
 
+#include <sys/stat.h>
+
 #include <glm/gtx/string_cast.hpp>
 
 namespace g3d {
@@ -67,7 +69,8 @@ GLFWImguiScene::save_frame(void)
                  GL_UNSIGNED_BYTE, m_copy->m_data);
 
     char path[PATH_MAX];
-    snprintf(path, sizeof(path), "save/frame-%04d.jpeg", m_frame_cnt);
+    snprintf(path, sizeof(path), "capture/frame-%04d.jpeg", m_frame_cnt);
+    mkdir("capture", 0755);
     m_copy->save_jpeg(path, 95, true);
     m_frame_cnt++;
 }
