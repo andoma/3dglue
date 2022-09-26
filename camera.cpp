@@ -105,6 +105,23 @@ struct ArcBallCamera : public PerspectiveCamera {
                     euler.y, euler.z);
         ImGui::Checkbox("AutoRotate", &m_autorotate);
         ImGui::Unindent();
+
+        if(m_presets.size()) {
+            if(ImGui::Button("Goto")) {
+                ImGui::OpenPopup("Goto");
+            }
+
+            if(ImGui::BeginPopup("Goto")) {
+                for(const auto &p : m_presets) {
+                    if(ImGui::Button(p.first.c_str())) {
+                        ImGui::CloseCurrentPopup();
+                        set(p.second);
+                        break;
+                    }
+                }
+                ImGui::EndPopup();
+            }
+        }
     }
 
     void update(float viewport_width, float viewport_height) override
