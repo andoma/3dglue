@@ -4,6 +4,7 @@
 #include "opengl.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 #include <glm/gtx/matrix_decompose.hpp>
@@ -91,11 +92,8 @@ struct ArcBallCamera : public PerspectiveCamera {
 
         auto euler = glm::eulerAngles(orientation) * (float)(180.0f / M_PI);
 
-        ImGui::Text("Pivot point");
-        ImGui::Indent();
-        ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f", m_lookat.x, m_lookat.y,
-                    m_lookat.z);
-        ImGui::Unindent();
+        ImGui::InputFloat3("Pivot", glm::value_ptr(m_lookat));
+
         ImGui::Text("Camera");
         ImGui::Indent();
         ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f", position.x, position.y,
