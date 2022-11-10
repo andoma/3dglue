@@ -134,7 +134,8 @@ struct Skybox : public Object {
         }
     }
 
-    void draw(const Scene &scene, const Camera &cam) override
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &pt) override
     {
         s_shader->use();
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
@@ -170,7 +171,7 @@ struct Ground : public Object {
         }
     }
 
-    void draw(const Scene &s, const Camera &cam) override
+    void draw(const Scene &s, const Camera &cam, const glm::mat4 &pt) override
     {
         s_shader->use();
         glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);

@@ -56,11 +56,12 @@ struct LineStrip : public Object {
         }
     }
 
-    void draw(const Scene &scene, const Camera &cam) override
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &pt) override
     {
         s_shader->use();
         s_shader->setMat4("PV", cam.m_P * cam.m_V);
-        s_shader->setMat4("model", m_model_matrix);
+        s_shader->setMat4("model", pt * m_model_matrix);
         s_shader->setVec4("col", m_color);
 
         glEnableVertexAttribArray(0);

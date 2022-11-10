@@ -18,7 +18,7 @@ struct Object {
 
     virtual void ui(const Scene &s) {}
 
-    virtual void draw(const Scene &s, const Camera &c) = 0;
+    virtual void draw(const Scene &s, const Camera &c, const glm::mat4 &pt) = 0;
 
     virtual void setColor(const glm::vec4 &ambient,
                           const glm::vec4 &diffuse = glm::vec4{0},
@@ -64,5 +64,7 @@ std::shared_ptr<Object> makeLine(const glm::vec3 segment[2]);
 std::shared_ptr<Object> makeLines(const std::vector<glm::vec3> &lines);
 
 std::shared_ptr<Object> makeLineStrip(const std::vector<glm::vec3> &lines);
+
+std::shared_ptr<Object> makeGroup(const char *name);
 
 }  // namespace g3d

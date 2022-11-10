@@ -153,12 +153,13 @@ struct PointCloud : public Object {
         }
     }
 
-    void draw(const Scene &scene, const Camera &cam) override
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &pt) override
     {
         Shader *s = m_shader.get();
         s->use();
         s->setMat4("PV", cam.m_P * cam.m_V);
-        s->setMat4("model", m_model_matrix);
+        s->setMat4("model", pt * m_model_matrix);
         s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
         s->setFloat("alpha", m_alpha);
 
@@ -242,9 +243,9 @@ struct PointCloud : public Object {
 
         if(m_rigid) {
             ImGui::Text("Translation");
-            ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
-            ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
-            ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
+            ImGui::SliderFloat("X##t", &m_translation.x, -1000, 1000);
+            ImGui::SliderFloat("Y##t", &m_translation.y, -1000, 1000);
+            ImGui::SliderFloat("Z##t", &m_translation.z, -1000, 1000);
 
             ImGui::Text("Rotation");
             ImGui::SliderAngle("X##r", &m_rotation.x);

@@ -382,7 +382,7 @@ GLFWImguiScene::draw()
     glDisable(GL_BLEND);
 
     if(m_skybox && m_skybox->m_visible)
-        m_skybox->draw(*this, *m_camera);
+        m_skybox->draw(*this, *m_camera, glm::mat4{1});
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -390,16 +390,16 @@ GLFWImguiScene::draw()
 
     for(auto &o : m_objects) {
         if(o->m_visible)
-            o->draw(*this, *m_camera);
+            o->draw(*this, *m_camera, glm::mat4{1});
     }
 
     if(m_ground && m_ground->m_visible)
-        m_ground->draw(*this, *m_camera);
+        m_ground->draw(*this, *m_camera, glm::mat4{1});
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     if(m_crosshair->m_visible)
-        m_crosshair->draw(*this, *m_camera);
+        m_crosshair->draw(*this, *m_camera, glm::mat4{1});
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

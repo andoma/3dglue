@@ -52,16 +52,17 @@ struct MeshObject : public Object {
         // clang-format on
     }
 
-    void draw(const Scene &scene, const Camera &cam) override
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &pt) override
     {
         m_shader->use();
 
         auto m = glm::translate(m_model_matrix, m_translation);
 
-        m_shader->setMat4("PVM", cam.m_P * cam.m_V * m);
+        m_shader->setMat4("PVM", cam.m_P * cam.m_V * pt * m);
 
         if(m_shader->has_uniform("M")) {
-            m_shader->setMat4("M", m);
+            m_shader->setMat4("M", pt * m);
         }
 
         if(has_per_vertex_color(m_attr_flags)) {
