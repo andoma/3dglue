@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 #include <string>
@@ -11,6 +12,22 @@ class thread_pool;
 namespace g3d {
 
 struct Texture2D;
+
+enum class VertexAttribute {
+    Position,
+    Normal,
+    Color,
+    UV0,
+};
+
+struct VertexBuffer {
+    virtual const float *get_attribute(VertexAttribute va, size_t index) const;
+    virtual size_t get_stride(VertexAttribute va, size_t index) const;
+};
+
+#if 0
+
+
 
 enum class MeshAttributes {
     None = 0x0,
@@ -236,5 +253,7 @@ struct Mesh {
     static std::shared_ptr<Mesh> loadSTL(const char *path,
                                          glm::mat4 transform = glm::mat4{1});
 };
+#endif
 
 }  // namespace g3d
+#endif

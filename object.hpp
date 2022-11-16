@@ -12,6 +12,7 @@ namespace g3d {
 
 struct Camera;
 struct Scene;
+struct VertexBuffer;
 
 struct Object {
     virtual ~Object(){};
@@ -28,7 +29,7 @@ struct Object {
 
     virtual void addChild(std::shared_ptr<Object> child) {}
 
-    virtual void update(const float *attributes, size_t length) {}
+    virtual void update(const std::shared_ptr<VertexBuffer> &vb) {}
 
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 
@@ -44,9 +45,8 @@ struct Object {
     bool m_visible{true};
 };
 
-std::shared_ptr<Object> makePointCloud(size_t num_points, const float *xyz,
-                                       const float *rgb = NULL,
-                                       const float *trait = NULL);
+std::shared_ptr<Object> makePointCloud(const std::shared_ptr<VertexBuffer> &vb,
+                                       bool interactive);
 
 std::shared_ptr<Object> makeCross();
 

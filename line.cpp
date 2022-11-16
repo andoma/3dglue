@@ -1,7 +1,7 @@
 #include "object.hpp"
 
 #include "shader.hpp"
-#include "buffer.hpp"
+#include "arraybuffer.hpp"
 #include "camera.hpp"
 
 static const char *line_vertex_shader = R"glsl(
@@ -38,34 +38,38 @@ void main()
 
 namespace g3d {
 
-struct LineStrip : public Object {
+struct Lines : public Object {
     inline static Shader *s_shader;
 
-    ArrayBuffer m_attrib_buf;
-    LineStrip(const std::vector<glm::vec3> strip, GLenum mode)
-      : m_attrib_buf((void *)&strip[0][0], sizeof(glm::vec3) * strip.size(),
-                     GL_ARRAY_BUFFER)
-      , m_count(strip.size())
-      , m_draw_count(m_count)
-      , m_mode(mode)
+    Lines(GLenum mode, const std::shared_ptr<VertexBuffer> &vb)
+      : m_mode(mode), m_vb(vb)
     {
         m_name = "Lines";
-        if(!s_shader) {
-            s_shader = new Shader("line", NULL, line_vertex_shader, -1,
-                                  line_fragment_shader, -1);
-        }
     }
 
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override
     {
+        if(!s_shader) {
+            s_shader = new Shader("line", NULL, line_vertex_shader, -1,
+                                  line_fragment_shader, -1);
+        }
+
         s_shader->use();
         s_shader->setMat4("PV", cam.m_P * cam.m_V);
         s_shader->setMat4("model", pt * m_model_matrix);
         s_shader->setVec4("col", m_color);
 
+        if(m_vb) {
+            m_attrib_buf.load(*m_vb);
+            m_vb.reset();
+            m_draw_count = m_attrib_buf.size();
+        }
+
+        if(!m_attrib_buf.bind())
+            return;
+
         glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void *)NULL);
         glDrawArrays(m_mode, 0, m_draw_count);
         glDisableVertexAttribArray(0);
@@ -80,38 +84,37 @@ struct LineStrip : public Object {
     void ui(const Scene &scene) override
     {
         ImGui::Checkbox("Visible", &m_visible);
-        ImGui::SliderInt("DrawCount", &m_draw_count, 0, m_count);
+        ImGui::SliderInt("DrawCount", &m_draw_count, 0, m_attrib_buf.size());
     }
 
-    void update(const float *attributes, size_t count) override
-    {
-        m_attrib_buf.write(attributes, sizeof(float) * count);
-        m_count = count / 3;
-        m_draw_count = m_count;
-    }
+    void update(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
+
+    const GLenum m_mode;
+    std::shared_ptr<VertexBuffer> m_vb;
+    VertexAttribBuffer m_attrib_buf;
 
     glm::vec4 m_color{1};
-    size_t m_count;
-    int m_draw_count;
-    const GLenum m_mode;
+    int m_draw_count{0};
 };
+
+std::shared_ptr<Object>
+makeLines(const std::vector<glm::vec3> &lines)
+{
+    return std::make_shared<Lines>(GL_LINES, VertexBuffer::make(lines));
+}
 
 std::shared_ptr<Object>
 makeLine(const glm::vec3 segment[2])
 {
     std::vector<glm::vec3> lines{segment[0], segment[1]};
-    return std::make_shared<LineStrip>(lines, GL_LINES);
+    return makeLines(lines);
 }
 
 std::shared_ptr<Object>
 makeLineStrip(const std::vector<glm::vec3> &linestrip)
 {
-    return std::make_shared<LineStrip>(linestrip, GL_LINE_STRIP);
-}
-
-std::shared_ptr<Object> makeLines(const std::vector<glm::vec3> &lines)
-{
-    return std::make_shared<LineStrip>(lines, GL_LINES);
+    return std::make_shared<Lines>(GL_LINE_STRIP,
+                                   VertexBuffer::make(linestrip));
 }
 
 }  // namespace g3d
