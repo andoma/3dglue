@@ -1,8 +1,10 @@
 #include "object.hpp"
 
-#include "buffer.hpp"
+#include "arraybuffer.hpp"
 #include "shader.hpp"
 #include "camera.hpp"
+#include "scene.hpp"
+#include "bvh.hpp"
 
 static const char *pc_vertex_shader = R"glsl(
 layout (location = 0) in vec3 aPos;
@@ -21,6 +23,7 @@ uniform vec4 albedo;
 uniform vec3 bbox1;
 uniform vec3 bbox2;
 uniform float alpha;
+uniform int focused;
 uniform vec2 trait_minmax;
 
 out vec4 fragmentColor;
@@ -37,11 +40,19 @@ void main()
    a = a * (aTrait >= trait_minmax.x && aTrait <= trait_minmax.y ? 1.0 : 0.0);
 #endif
 
+   if(gl_VertexID == focused) {
+     gl_PointSize = 10;
+   } else {
+     gl_PointSize = 1;
+   }
+
 #ifdef PER_VERTEX_COLOR
    fragmentColor = vec4(aCol.xyz, a) * albedo;
 #else
    fragmentColor = vec4(1,1,1, a) * albedo;
 #endif
+
+
 }
 
 )glsl";
@@ -61,101 +72,79 @@ void main()
 
 )glsl";
 
-static const char *bb_vertex_shader = R"glsl(
-
-#version 330 core
-layout (location = 0) in vec3 pos;
-
-uniform mat4 PV;
-uniform mat4 model;
-out vec4 fragmentColor;
-
-void main()
-{
-   gl_Position = PV * model * vec4(pos.xyz, 1);
-}
-
-)glsl";
-
-static const char *bb_fragment_shader = R"glsl(
-
-#version 330 core
-out vec4 FragColor;
-
-void main()
-{
-  FragColor = vec4(1,1,1,1);
-}
-
-)glsl";
-
-static float attribs[][3] = {
-    {-1, -1, -1}, {1, -1, -1},
-
-    {1, -1, -1},  {1, 1, -1},
-
-    {1, 1, -1},   {-1, 1, -1},
-
-    {-1, 1, -1},  {-1, -1, -1},
-
-    {-1, -1, 1},  {1, -1, 1},
-
-    {1, -1, 1},   {1, 1, 1},
-
-    {1, 1, 1},    {-1, 1, 1},
-
-    {-1, 1, 1},   {-1, -1, 1},
-
-    {-1, -1, -1}, {-1, -1, 1},
-
-    {1, -1, -1},  {1, -1, 1},
-
-    {1, 1, -1},   {1, 1, 1},
-
-    {-1, 1, -1},  {-1, 1, 1},
-};
-
 namespace g3d {
 
 struct PointCloud : public Object {
-    inline static Shader *s_bb_shader;
-
     std::unique_ptr<Shader> m_shader;
 
-    ArrayBuffer m_attrib_buf;
+    VertexAttribBuffer m_attrib_buf;
 
-    PointCloud(size_t num_points, const float *xyz, const float *rgb,
-               const float *trait)
-      : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
-      , m_xyz(xyz, num_points * sizeof(float) * 3, GL_ARRAY_BUFFER)
-      , m_rgb(rgb, num_points * sizeof(float) * 3, GL_ARRAY_BUFFER)
-      , m_trait(trait, num_points * sizeof(float), GL_ARRAY_BUFFER)
-      , m_colorized(!!rgb)
-      , m_traited(!!trait)
-      , m_num_points(num_points)
+    PointCloud(const std::shared_ptr<VertexBuffer> &vb, bool interactive)
+      : m_vb(vb), m_interactive(interactive)
     {
-        char hdr[4096];
-
         m_name = "Pointcloud";
+    }
 
-        snprintf(hdr, sizeof(hdr),
-                 "#version 330 core\n"
-                 "%s%s",
-                 rgb ? "#define PER_VERTEX_COLOR\n" : "",
-                 trait ? "#define PER_VERTEX_TRAIT\n" : "");
+    void hit(const glm::vec3 &origin, const glm::vec3 &direction,
+             const glm::mat4 &parent_mm, Hit &hit) override
+    {
+        if(!m_intersector)
+            return;
+        const auto m = parent_mm * m_model_matrix;
 
-        m_shader = std::make_unique<Shader>("pointcloud", hdr, pc_vertex_shader,
-                                            -1, pc_fragment_shader, -1);
+        const auto m_I = glm::inverse(m);
+        const auto o = m_I * glm::vec4(origin, 1);
+        const auto dir = glm::normalize(m_I * glm::vec4(direction, 0));
+        const auto res = m_intersector->intersect(o, dir);
 
-        if(!s_bb_shader) {
-            s_bb_shader = new Shader("pointcloud-bb", NULL, bb_vertex_shader,
-                                     -1, bb_fragment_shader, -1);
+        if(res) {
+            auto p = m * glm::vec4(res->second, 1);
+            auto d = glm::distance(glm::vec3(p), origin);
+
+            if(d < hit.distance) {
+                hit.object = this;
+                hit.primitive = res->first;
+                hit.distance = d;
+                hit.world_pos = p;
+            }
         }
     }
+
+    void update(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
 
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override
     {
+        if(m_vb) {
+            if(m_interactive)
+                m_intersector =
+                    Intersector::make(m_vb, IntersectionMode::POINT);
+
+            uint32_t mask = m_vb->get_attribute_mask();
+            // Recompile shader if attribute setup changes
+            if(m_attrib_buf.get_attribute_mask() ^ mask) {
+                char hdr[4096];
+                snprintf(hdr, sizeof(hdr),
+                         "#version 330 core\n"
+                         "%s%s",
+                         m_vb->get_elements(VertexAttribute::Color)
+                             ? "#define PER_VERTEX_COLOR\n"
+                             : "",
+                         m_vb->get_elements(VertexAttribute::Aux)
+                             ? "#define PER_VERTEX_TRAIT\n"
+                             : "");
+                m_shader = std::make_unique<Shader>("pointcloud", hdr,
+                                                    pc_vertex_shader, -1,
+                                                    pc_fragment_shader, -1);
+            }
+
+            m_attrib_buf.load(*m_vb);
+            m_vb.reset();
+        }
+
+        if(!m_attrib_buf.bind())
+            return;
+
         Shader *s = m_shader.get();
         s->use();
         s->setMat4("PV", cam.m_P * cam.m_V);
@@ -163,7 +152,7 @@ struct PointCloud : public Object {
         s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
         s->setFloat("alpha", m_alpha);
 
-        if(m_traited) {
+        if(m_attrib_buf.get_elements(VertexAttribute::Aux)) {
             if(m_trait_on) {
                 s->setVec2("trait_minmax", glm::vec2{m_trait_min, m_trait_max});
             } else {
@@ -178,52 +167,30 @@ struct PointCloud : public Object {
             s->setVec3("bbox2", glm::vec3{INFINITY});
         }
 
+        s->setInt("focused",
+                  scene.m_hit.object == this ? scene.m_hit.primitive : -1);
+
         glPointSize(m_pointsize);
 
         glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, m_xyz.m_buffer);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, NULL);
 
-        if(m_colorized) {
+        m_attrib_buf.ptr(0, VertexAttribute::Position);
+
+        if(m_attrib_buf.get_elements(VertexAttribute::Color)) {
             glEnableVertexAttribArray(1);
-            glBindBuffer(GL_ARRAY_BUFFER, m_rgb.m_buffer);
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, NULL);
+            m_attrib_buf.ptr(1, VertexAttribute::Color);
         }
 
-        if(m_traited) {
+        if(m_attrib_buf.get_elements(VertexAttribute::Aux)) {
             glEnableVertexAttribArray(2);
-            glBindBuffer(GL_ARRAY_BUFFER, m_trait.m_buffer);
-            glVertexAttribPointer(2, 1, GL_FLOAT, GL_TRUE, 0, NULL);
+            m_attrib_buf.ptr(2, VertexAttribute::Aux);
         }
-
-        glDrawArrays(GL_POINTS, 0, m_num_points);
+        glEnable(GL_PROGRAM_POINT_SIZE);
+        glDrawArrays(GL_POINTS, 0, m_attrib_buf.size());
+        glDisable(GL_PROGRAM_POINT_SIZE);
         glDisableVertexAttribArray(0);
-        if(m_colorized) {
-            glDisableVertexAttribArray(1);
-        }
-        if(m_traited) {
-            glDisableVertexAttribArray(2);
-        }
-
-        if(m_bb) {
-            s_bb_shader->use();
-            s_bb_shader->setMat4("PV", cam.m_P * cam.m_V);
-
-            auto m = m_model_matrix;
-
-            m = glm::translate(m, m_bbox_center);
-            m = glm::scale(m, m_bbox_size * 0.5f);
-            s_bb_shader->setMat4("model", m);
-
-            glEnableVertexAttribArray(0);
-
-            glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
-
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void *)NULL);
-
-            glDrawArrays(GL_LINES, 0, 24);
-            glDisableVertexAttribArray(0);
-        }
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
     }
 
     void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
@@ -234,7 +201,7 @@ struct PointCloud : public Object {
 
     void ui(const Scene &scene) override
     {
-        ImGui::Text("%zd points", m_num_points);
+        ImGui::Text("%zd points", m_attrib_buf.size());
         ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);
 
         ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
@@ -279,12 +246,7 @@ struct PointCloud : public Object {
         }
     }
 
-    ArrayBuffer m_xyz;
-    ArrayBuffer m_rgb;
-    ArrayBuffer m_trait;
-    const bool m_colorized;
-    const bool m_traited;
-    const size_t m_num_points;
+    std::shared_ptr<VertexBuffer> m_vb;
 
     glm::vec4 m_color{1};
 
@@ -301,13 +263,15 @@ struct PointCloud : public Object {
     bool m_trait_on{false};
     float m_trait_min{0};
     float m_trait_max{1};
+
+    std::shared_ptr<Intersector> m_intersector;
+    const bool m_interactive{false};
 };
 
 std::shared_ptr<Object>
-makePointCloud(size_t num_points, const float *xyz, const float *rgb,
-               const float *trait)
+makePointCloud(const std::shared_ptr<VertexBuffer> &vb, bool interactive)
 {
-    return std::make_shared<PointCloud>(num_points, xyz, rgb, trait);
+    return std::make_shared<PointCloud>(vb, interactive);
 }
 
 }  // namespace g3d

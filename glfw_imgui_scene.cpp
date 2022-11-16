@@ -9,12 +9,12 @@
 
 #include <glm/gtx/string_cast.hpp>
 
+#include <optional>
+
 namespace g3d {
 
 struct GLFWImguiScene : public Scene {
     GLFWImguiScene(const char *title, int width, int height, float ground_size);
-
-    glm::vec3 cursorDirection() override;
 
     ~GLFWImguiScene();
 
@@ -23,6 +23,8 @@ struct GLFWImguiScene : public Scene {
     void draw() override;
 
     void save_frame(void);
+
+    void mark();
 
     glm::vec2 normalizedCursor();
 
@@ -56,6 +58,14 @@ struct GLFWImguiScene : public Scene {
     int m_frame_cnt{0};
 
     bool m_record{false};
+
+    bool m_measure_phase{false};
+
+    std::optional<glm::vec3> m_p1;
+    std::shared_ptr<Object> m_p1_crosshair;
+
+    std::optional<glm::vec3> m_p2;
+    std::shared_ptr<Object> m_p2_crosshair;
 };
 
 void
@@ -101,6 +111,10 @@ MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
             return;
 
         if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            if(s->m_alt_down) {
+                s->mark();
+            }
+
             s->m_left_down = true;
         }
         if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
@@ -272,6 +286,8 @@ GLFWImguiScene::prepare()
     auto cursor = normalizedCursor();
     auto cursor_delta = cursor - m_cursor_prev;
 
+    m_hit.distance = INFINITY;
+
     if(m_camera != NULL) {
         if(m_left_down) {
             if(m_ctrl_down) {
@@ -286,6 +302,21 @@ GLFWImguiScene::prepare()
                 m_camera->uiInput(Camera::Control::DRAG4, cursor_delta);
             } else {
                 m_camera->uiInput(Camera::Control::DRAG3, cursor_delta);
+            }
+        }
+
+        m_camera->update(m_width * m_scene_editor_start, m_height);
+
+        auto origin = glm::vec3(m_camera->m_VI[3]);
+        auto cursor = normalizedCursor();
+        auto VPI = glm::inverse(m_camera->m_P * m_camera->m_V);
+        auto screenpos = glm::vec4(cursor.x, -cursor.y, 1.0f, 1.0f);
+        auto worldpos = VPI * screenpos;
+        auto dir = glm::normalize(glm::vec3(worldpos));
+
+        for(auto &o : m_objects) {
+            if(o->m_visible) {
+                o->hit(origin, dir, glm::mat4{1}, m_hit);
             }
         }
 
@@ -305,15 +336,34 @@ GLFWImguiScene::prepare()
 
                 ImGui::Checkbox("Crosshair", &m_crosshair->m_visible);
             }
+
+            if(ImGui::CollapsingHeader("Measure")) {
+                ImGui::Text("Cur X:% -9.2f Y:% -9.2f Z:% -9.2f",
+                            m_hit.world_pos.x, m_hit.world_pos.y,
+                            m_hit.world_pos.z);
+
+                if(m_p1) {
+                    ImGui::Text("P1  X:% -9.2f Y:% -9.2f Z:% -9.2f", m_p1->x,
+                                m_p1->y, m_p1->z);
+                }
+
+                if(m_p2) {
+                    ImGui::Text("P2  X:% -9.2f Y:% -9.2f Z:% -9.2f", m_p2->x,
+                                m_p2->y, m_p2->z);
+                }
+
+                if(m_p1 && m_p2) {
+                    ImGui::Text("Distance: %f", glm::distance(*m_p1, *m_p2));
+                }
+            }
         }
         ImGui::End();
-        m_camera->update(m_width * m_scene_editor_start, m_height);
+
+        float ch_size = m_camera->distance() * 0.025f;
+        m_crosshair->setModelMatrix(
+            glm::scale(glm::translate(glm::mat4{1}, m_camera->lookAt()),
+                       glm::vec3{ch_size}));
     }
-
-    float ch_size = m_camera->distance() * 0.025f;
-
-    m_crosshair->setModelMatrix(glm::scale(
-        glm::translate(glm::mat4{1}, m_camera->lookAt()), glm::vec3{ch_size}));
 
     if(ImGui::Begin("Scene")) {
         for(auto &o : m_objects) {
@@ -351,19 +401,6 @@ GLFWImguiScene::normalizedCursor()
     return cursor;
 }
 
-glm::vec3
-GLFWImguiScene::cursorDirection()
-{
-#if 0
-    auto cursor = normalizedCursor();
-
-    auto ray =
-        glm::inverse(m_P * m_V) * glm::vec4(cursor.x, -cursor.y, 0, 1.0f);
-    return glm::normalize(glm::vec3(ray));
-#endif
-    return glm::vec3{0};
-}
-
 void
 GLFWImguiScene::draw()
 {
@@ -389,8 +426,9 @@ GLFWImguiScene::draw()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     for(auto &o : m_objects) {
-        if(o->m_visible)
+        if(o->m_visible) {
             o->draw(*this, *m_camera, glm::mat4{1});
+        }
     }
 
     if(m_ground && m_ground->m_visible)
@@ -401,6 +439,11 @@ GLFWImguiScene::draw()
     if(m_crosshair->m_visible)
         m_crosshair->draw(*this, *m_camera, glm::mat4{1});
 
+    if(m_p1_crosshair)
+        m_p1_crosshair->draw(*this, *m_camera, glm::mat4{1});
+    if(m_p2_crosshair)
+        m_p2_crosshair->draw(*this, *m_camera, glm::mat4{1});
+
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwMakeContextCurrent(m_window);
@@ -408,6 +451,31 @@ GLFWImguiScene::draw()
 
     if(m_record)
         save_frame();
+}
+
+void
+GLFWImguiScene::mark()
+{
+    if(m_measure_phase) {
+        m_p2 = m_hit.world_pos;
+
+        if(!m_p2_crosshair)
+            m_p2_crosshair = makeCross();
+
+        m_p2_crosshair->setModelMatrix(
+            glm::scale(glm::translate(glm::mat4{1}, *m_p2), glm::vec3{10}));
+
+    } else {
+        m_p1 = m_hit.world_pos;
+
+        if(!m_p1_crosshair)
+            m_p1_crosshair = makeCross();
+
+        m_p1_crosshair->setModelMatrix(
+            glm::scale(glm::translate(glm::mat4{1}, *m_p1), glm::vec3{10}));
+    }
+
+    m_measure_phase = !m_measure_phase;
 }
 
 std::shared_ptr<Scene>

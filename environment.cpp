@@ -1,7 +1,7 @@
 #include "object.hpp"
 
 #include "shader.hpp"
-#include "buffer.hpp"
+#include "arraybuffer.hpp"
 #include "camera.hpp"
 
 static const char *viewport_vertex_shader = R"glsl(
@@ -123,26 +123,25 @@ namespace g3d {
 struct Skybox : public Object {
     inline static Shader *s_shader;
 
-    ArrayBuffer m_attrib_buf;
+    ArrayBuffer m_attrib_buf{GL_ARRAY_BUFFER};
 
-    Skybox()
-      : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &pt) override
     {
         if(!s_shader) {
             s_shader = new Shader("skybox", NULL, viewport_vertex_shader, -1,
                                   skybox_fragment_shader, -1);
         }
-    }
 
-    void draw(const Scene &scene, const Camera &cam,
-              const glm::mat4 &pt) override
-    {
         s_shader->use();
-        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
         auto p = cam.m_P;
         p[2].z = 0;
         s_shader->setMat4("PVinv", glm::inverse(p * cam.m_V));
+
+        if(!m_attrib_buf.bind()) {
+            m_attrib_buf.write((void *)&attribs[0][0], sizeof(attribs));
+        }
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);
@@ -159,22 +158,18 @@ struct Skybox : public Object {
 struct Ground : public Object {
     inline static Shader *s_shader;
 
-    ArrayBuffer m_attrib_buf;
+    ArrayBuffer m_attrib_buf{GL_ARRAY_BUFFER};
 
-    Ground(float checkersize)
-      : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
-      , m_checkersize(checkersize)
+    Ground(float checkersize) : m_checkersize(checkersize) {}
+
+    void draw(const Scene &s, const Camera &cam, const glm::mat4 &pt) override
     {
         if(!s_shader) {
             s_shader = new Shader("ground", NULL, viewport_vertex_shader, -1,
                                   ground_fragment_shader, -1);
         }
-    }
 
-    void draw(const Scene &s, const Camera &cam, const glm::mat4 &pt) override
-    {
         s_shader->use();
-        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
         s_shader->setVec3("cam", cam.m_VI[3]);
         auto p = cam.m_P;
@@ -183,6 +178,10 @@ struct Ground : public Object {
         s_shader->setMat4("PVinv", glm::inverse(p * cam.m_V));
         s_shader->setFloat("scale", 0.5f / m_checkersize);
         s_shader->setMat4("PV", cam.m_P * cam.m_V);
+
+        if(!m_attrib_buf.bind()) {
+            m_attrib_buf.write((void *)&attribs[0][0], sizeof(attribs));
+        }
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_TRUE, 0, NULL);

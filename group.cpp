@@ -8,38 +8,29 @@ namespace g3d {
 struct Group : public Object {
     Group(const char *name) { m_name = name; }
 
-    void draw(const Scene &scene, const Camera &cam,
-              const glm::mat4 &pt) override
+    void hit(const glm::vec3 &origin, const glm::vec3 &direction,
+             const glm::mat4 &parent_mm, Hit &hit) override
     {
-        if(!m_visible)
-            return;
         for(auto &o : m_children) {
-            o->draw(scene, cam, m_model_matrix * pt);
+            if(o->m_visible) {
+                o->hit(origin, direction, m_model_matrix * parent_mm, hit);
+            }
+        }
+    }
+
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &parent_mm) override
+    {
+        for(auto &o : m_children) {
+            if(o->m_visible) {
+                o->draw(scene, cam, m_model_matrix * parent_mm);
+            }
         }
     }
 
     void ui(const Scene &scene) override
     {
         ImGui::Checkbox("Visible", &m_visible);
-        ImGui::Checkbox("Rigid Transform", &m_rigid);
-
-        if(m_rigid) {
-            ImGui::SliderFloat3("Translation", glm::value_ptr(m_translation),
-                                -100, 100);
-            ImGui::Text("Rotation");
-            ImGui::SliderAngle("X##r", &m_rotation.x);
-            ImGui::SliderAngle("Y##r", &m_rotation.y);
-            ImGui::SliderAngle("Z##r", &m_rotation.z);
-
-            auto m = glm::mat4(1);
-            m = glm::translate(m, m_translation);
-            m = glm::rotate(m, m_rotation.x, {1, 0, 0});
-            m = glm::rotate(m, m_rotation.y, {0, 1, 0});
-            m = glm::rotate(m, m_rotation.z, {0, 0, 1});
-            m_model_matrix = m;
-        } else {
-            m_model_matrix = glm::mat4{1};
-        }
     }
 
     void addChild(std::shared_ptr<Object> child) override
@@ -53,7 +44,6 @@ struct Group : public Object {
     glm::vec3 m_bbox_size{1000};
 
     bool m_rigid{false};
-    bool m_visible{true};
 
     std::vector<std::shared_ptr<Object>> m_children;
 };

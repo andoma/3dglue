@@ -1,7 +1,8 @@
 #include "object.hpp"
 
 #include "shader.hpp"
-#include "buffer.hpp"
+#include "vertexbuffer.hpp"
+#include "arraybuffer.hpp"
 #include "mesh.hpp"
 #include "texture.hpp"
 #include "camera.hpp"
@@ -17,109 +18,113 @@ extern int phong_fragment_glsl_len;
 namespace g3d {
 
 struct MeshObject : public Object {
-    MeshObject(const Mesh &data, float normal_colorize)
-      : m_attrib_buf(&data.m_attributes[0],
-                     data.m_attributes.size() * sizeof(float), GL_ARRAY_BUFFER)
-      , m_index_buf(&data.m_indicies[0], data.m_indicies.size() * sizeof(float),
-                    GL_ELEMENT_ARRAY_BUFFER)
-      , m_attr_flags(data.m_attr_flags)
-      , m_elements(data.m_indicies.size())
-      , m_drawcount(m_elements / 3)
-      , m_apv(data.m_apv)
-      , m_vertices(data.num_vertices())
-      , m_normal_colorize(normal_colorize)
-      , m_tex0(data.m_tex0)
+    MeshObject(const std::shared_ptr<VertexBuffer> &vb,
+               const std::shared_ptr<std::vector<glm::ivec3>> &ib)
+      : m_vb(vb), m_ib(ib)
     {
-        char hdr[4096];
-
         m_name = "Mesh";
-
-        snprintf(
-            hdr, sizeof(hdr),
-            "#version 330 core\n"
-            "%s%s%s",
-            has_normals(m_attr_flags) ? "#define PER_VERTEX_NORMALS\n" : "",
-            has_per_vertex_color(m_attr_flags) ? "#define PER_VERTEX_COLOR\n"
-                                               : "",
-            has_uv0(m_attr_flags) ? "#define TEX0\n" : "");
-
-        // clang-format off
-        m_shader = std::make_unique<Shader>("phong",
-            hdr,
-            (const char *)phong_vertex_glsl,   (int)phong_vertex_glsl_len,
-            (const char *)phong_fragment_glsl, (int)phong_fragment_glsl_len,
-            (const char *)phong_geometry_glsl, (int)phong_geometry_glsl_len);
-        // clang-format on
     }
 
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override
     {
-        m_shader->use();
+        if(m_ib) {
+            m_elements = m_ib->size();
+            m_index_buf.write((void *)m_ib->data(),
+                              m_ib->size() * sizeof(glm::ivec3));
+            m_ib.reset();
+        }
+
+        if(m_vb) {
+            uint32_t mask = m_vb->get_attribute_mask();
+
+            // Recompile shader if attribute setup changes
+            if(m_attrib_buf.get_attribute_mask() ^ mask) {
+                char hdr[4096];
+
+                snprintf(hdr, sizeof(hdr),
+                         "#version 330 core\n"
+                         "%s%s%s",
+                         m_vb->get_elements(VertexAttribute::Normal)
+                             ? "#define PER_VERTEX_NORMALS\n"
+                             : "",
+                         m_vb->get_elements(VertexAttribute::Color)
+                             ? "#define PER_VERTEX_COLOR\n"
+                             : "",
+                         m_vb->get_elements(VertexAttribute::UV0)
+                             ? "#define TEX0\n"
+                             : "");
+
+                // clang-format off
+                m_shader = std::make_unique<Shader>("phong",
+            hdr,
+            (const char *)phong_vertex_glsl,   (int)phong_vertex_glsl_len,
+            (const char *)phong_fragment_glsl, (int)phong_fragment_glsl_len,
+            (const char *)phong_geometry_glsl, (int)phong_geometry_glsl_len);
+                // clang-format on
+            }
+
+            m_attrib_buf.load(*m_vb);
+            m_vb.reset();
+        }
+
+        if(!m_attrib_buf.bind())
+            return;
+
+        Shader *s = m_shader.get();
+
+        s->use();
 
         auto m = glm::translate(m_model_matrix, m_translation);
 
-        m_shader->setMat4("PVM", cam.m_P * cam.m_V * pt * m);
+        s->setMat4("PVM", cam.m_P * cam.m_V * pt * m);
 
-        if(m_shader->has_uniform("M")) {
-            m_shader->setMat4("M", pt * m);
+        if(s->has_uniform("M")) {
+            s->setMat4("M", pt * m);
         }
 
-        if(has_per_vertex_color(m_attr_flags)) {
-            m_shader->setFloat("per_vertex_color_blend", m_colorize);
+        if(m_attrib_buf.get_elements(VertexAttribute::Color)) {
+            s->setFloat("per_vertex_color_blend", m_colorize);
         }
 
         if(scene.m_lightpos) {
-            m_shader->setVec3("lightPos", *scene.m_lightpos);
-            m_shader->setVec3("diffuseColor", m_diffuse);
-            m_shader->setVec3("specularColor", m_specular);
-            m_shader->setVec3("ambientColor", m_ambient);
+            s->setVec3("lightPos", *scene.m_lightpos);
+            s->setVec3("diffuseColor", m_diffuse);
+            s->setVec3("specularColor", m_specular);
+            s->setVec3("ambientColor", m_ambient);
         } else {
-            m_shader->setVec3("ambientColor", glm::vec3{1.0f});
+            s->setVec3("ambientColor", glm::vec3{1.0f});
         }
 
-        m_shader->setFloat("normalColorize", m_normal_colorize);
+        s->setFloat("normalColorize", m_normal_colorize);
 
-        if(m_shader->has_uniform("viewPos")) {
-            m_shader->setVec3("viewPos", glm::vec3{cam.m_VI[3]});
+        if(s->has_uniform("viewPos")) {
+            s->setVec3("viewPos", glm::vec3{cam.m_VI[3]});
         }
-
-        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
 
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, m_apv * sizeof(float),
-                              (void *)NULL);
+        m_attrib_buf.ptr(0, VertexAttribute::Position);
 
-        int off = 3;
-
-        if(has_normals(m_attr_flags)) {
+        if(m_attrib_buf.get_elements(VertexAttribute::Normal)) {
             glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                                  m_apv * sizeof(float),
-                                  (void *)(off * sizeof(float)));
-            off += 3;
+            m_attrib_buf.ptr(1, VertexAttribute::Normal);
         }
 
-        if(has_per_vertex_color(m_attr_flags)) {
+        if(m_attrib_buf.get_elements(VertexAttribute::Color)) {
             glEnableVertexAttribArray(2);
-            glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE,
-                                  m_apv * sizeof(float),
-                                  (void *)(off * sizeof(float)));
-            off += 4;
+            m_attrib_buf.ptr(2, VertexAttribute::Normal);
         }
 
-        if(has_uv0(m_attr_flags)) {
+        if(m_attrib_buf.get_elements(VertexAttribute::UV0)) {
             glEnableVertexAttribArray(3);
-            glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
-                                  m_apv * sizeof(float),
-                                  (void *)(off * sizeof(float)));
-            off += 2;
+            m_attrib_buf.ptr(3, VertexAttribute::UV0);
         }
 
-        if(m_tex0) {
+        GLuint tex0 = m_tex0.get();
+        if(tex0) {
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, m_tex0->get());
-            m_shader->setInt("tex0", 0);
+            glBindTexture(GL_TEXTURE_2D, tex0);
+            s->setInt("tex0", 0);
         }
 
         if(m_backface_culling)
@@ -128,12 +133,11 @@ struct MeshObject : public Object {
         if(m_wireframe)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        if(m_elements) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buf.m_buffer);
+        if(m_index_buf.bind()) {
             glDrawElements(GL_TRIANGLES, m_drawcount * 3, GL_UNSIGNED_INT,
                            NULL);
         } else {
-            glDrawArrays(GL_TRIANGLES, 0, m_vertices);
+            glDrawArrays(GL_TRIANGLES, 0, m_attrib_buf.size());
         }
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -142,6 +146,7 @@ struct MeshObject : public Object {
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(3);
     }
 
     void ui(const Scene &scene) override
@@ -176,34 +181,42 @@ struct MeshObject : public Object {
         m_specular = specular;
     }
 
-    ArrayBuffer m_attrib_buf;
-    ArrayBuffer m_index_buf;
-    const MeshAttributes m_attr_flags;
-    const size_t m_elements;
+    void update(const std::shared_ptr<Image2D> &img) override
+    {
+        m_tex0.set(img);
+    }
+
+    VertexAttribBuffer m_attrib_buf;
+    ArrayBuffer m_index_buf{GL_ELEMENT_ARRAY_BUFFER};
+
     std::unique_ptr<Shader> m_shader;
     int m_drawcount{0};
-    const int m_apv;
-    const size_t m_vertices;
+    int m_elements{0};
 
     glm::vec3 m_ambient{1};
     glm::vec3 m_specular{1};
     glm::vec3 m_diffuse{1};
 
     float m_colorize{1};
-    float m_normal_colorize;
+    float m_normal_colorize{0};
 
     bool m_wireframe{false};
     bool m_backface_culling{true};
 
-    std::shared_ptr<Texture2D> m_tex0;
+    Texture2D m_tex0;
 
     glm::vec3 m_translation{0};
+
+    std::shared_ptr<VertexBuffer> m_vb;
+    std::shared_ptr<std::vector<glm::ivec3>> m_ib;
 };
 
 std::shared_ptr<Object>
-makeMeshObject(const Mesh &data, float normal_color_blend)
+makeMeshObject(const std::shared_ptr<VertexBuffer> &vb,
+               const std::vector<glm::ivec3> &ib, bool interactive)
 {
-    return std::make_shared<MeshObject>(data, normal_color_blend);
+    auto ibsp = std::make_shared<std::vector<glm::ivec3>>(ib);
+    return std::make_shared<MeshObject>(vb, ibsp);
 }
 
 }  // namespace g3d

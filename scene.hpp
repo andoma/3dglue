@@ -11,6 +11,13 @@ namespace g3d {
 struct Object;
 struct Camera;
 
+struct Hit {
+    Object *object;
+    float distance;
+    size_t primitive;
+    glm::vec3 world_pos;
+};
+
 struct Scene {
     virtual ~Scene(){};
 
@@ -24,7 +31,7 @@ struct Scene {
 
     std::optional<glm::vec3> m_lightpos;
 
-    virtual glm::vec3 cursorDirection() = 0;
+    Hit m_hit;
 };
 
 std::shared_ptr<Scene> makeGLFWImguiScene(const char *title, int width,

@@ -1,7 +1,7 @@
 #include "object.hpp"
 
 #include "shader.hpp"
-#include "buffer.hpp"
+#include "arraybuffer.hpp"
 #include "camera.hpp"
 
 static const char *cross_vertex_shader = R"glsl(
@@ -48,19 +48,16 @@ namespace g3d {
 struct Cross : public Object {
     inline static Shader *s_shader;
 
-    ArrayBuffer m_attrib_buf;
-    Cross()
-      : m_attrib_buf((void *)&attribs[0][0], sizeof(attribs), GL_ARRAY_BUFFER)
+    ArrayBuffer m_attrib_buf{GL_ARRAY_BUFFER};
+
+    void draw(const Scene &scene, const Camera &cam,
+              const glm::mat4 &pt) override
     {
         if(!s_shader) {
             s_shader = new Shader("cross", NULL, cross_vertex_shader, -1,
                                   cross_fragment_shader, -1);
         }
-    }
 
-    void draw(const Scene &scene, const Camera &cam,
-              const glm::mat4 &pt) override
-    {
         s_shader->use();
         s_shader->setMat4("PV", cam.m_P * cam.m_V);
         s_shader->setMat4("model", pt * m_model_matrix);
@@ -68,7 +65,9 @@ struct Cross : public Object {
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
 
-        glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
+        if(!m_attrib_buf.bind()) {
+            m_attrib_buf.write((void *)&attribs[0][0], sizeof(attribs));
+        }
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 7 * sizeof(float),
                               (void *)NULL);

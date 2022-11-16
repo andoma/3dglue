@@ -12,13 +12,24 @@ namespace g3d {
 
 struct Camera;
 struct Scene;
+struct VertexBuffer;
+struct IndexBuffer;
+struct Image2D;
+struct Object;
+struct Hit;
 
-struct Object {
+struct Object : public std::enable_shared_from_this<Object> {
     virtual ~Object(){};
 
     virtual void ui(const Scene &s) {}
 
-    virtual void draw(const Scene &s, const Camera &c, const glm::mat4 &pt) = 0;
+    virtual void draw(const Scene &s, const Camera &c,
+                      const glm::mat4 &parent_mm) = 0;
+
+    virtual void hit(const glm::vec3 &origin, const glm::vec3 &direction,
+                     const glm::mat4 &parent_mm, Hit &hit)
+    {
+    }
 
     virtual void setColor(const glm::vec4 &ambient,
                           const glm::vec4 &diffuse = glm::vec4{0},
@@ -28,7 +39,9 @@ struct Object {
 
     virtual void addChild(std::shared_ptr<Object> child) {}
 
-    virtual void update(const float *attributes, size_t length) {}
+    virtual void update(const std::shared_ptr<VertexBuffer> &vb) {}
+
+    virtual void update(const std::shared_ptr<Image2D> &tex) {}
 
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 
@@ -44,16 +57,14 @@ struct Object {
     bool m_visible{true};
 };
 
-std::shared_ptr<Object> makePointCloud(size_t num_points, const float *xyz,
-                                       const float *rgb = NULL,
-                                       const float *trait = NULL);
+std::shared_ptr<Object> makePointCloud(const std::shared_ptr<VertexBuffer> &vb,
+                                       bool interactive);
 
 std::shared_ptr<Object> makeCross();
 
-struct Mesh;
-
-std::shared_ptr<Object> makeMeshObject(const Mesh &data,
-                                       float normal_color_blend = 0.0f);
+std::shared_ptr<Object> makeMeshObject(const std::shared_ptr<VertexBuffer> &vb,
+                                       const std::vector<glm::ivec3> &ib,
+                                       bool interactive = false);
 
 std::shared_ptr<Object> makeSkybox();
 

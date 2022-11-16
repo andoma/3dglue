@@ -1,3 +1,7 @@
+#if 0
+#pragma once
+
+#if 0
 #pragma once
 
 #include <string>
@@ -12,51 +16,10 @@ namespace g3d {
 
 struct Texture2D;
 
-enum class MeshAttributes {
-    None = 0x0,
-    // Vertex usage is implicit
-    Normals = 0x1,
-    PerVertexColor = 0x2,
-    UV0 = 0x04,
-};
+#if 0
 
-inline constexpr MeshAttributes
-operator|(MeshAttributes a, MeshAttributes b)
-{
-    return static_cast<MeshAttributes>(static_cast<int>(a) |
-                                       static_cast<int>(b));
-}
 
-inline constexpr MeshAttributes
-operator&(MeshAttributes a, MeshAttributes b)
-{
-    return static_cast<MeshAttributes>(static_cast<int>(a) &
-                                       static_cast<int>(b));
-}
 
-inline constexpr bool
-operator!(MeshAttributes a)
-{
-    return static_cast<bool>(!static_cast<int>(a));
-}
-
-inline constexpr bool
-has_normals(MeshAttributes a)
-{
-    return !!(a & MeshAttributes::Normals);
-}
-
-inline constexpr bool
-has_per_vertex_color(MeshAttributes a)
-{
-    return !!(a & MeshAttributes::PerVertexColor);
-}
-
-inline constexpr bool
-has_uv0(MeshAttributes a)
-{
-    return !!(a & MeshAttributes::UV0);
-}
 
 struct Mesh {
     Mesh(MeshAttributes flags, const std::shared_ptr<Texture2D> &tex0 = nullptr)
@@ -236,5 +199,8 @@ struct Mesh {
     static std::shared_ptr<Mesh> loadSTL(const char *path,
                                          glm::mat4 transform = glm::mat4{1});
 };
+#endif
 
 }  // namespace g3d
+#endif
+#endif
