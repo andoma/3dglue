@@ -13,10 +13,10 @@ Texture2D::~Texture2D()
 GLuint
 Texture2D::get()
 {
-    if(!m_tex)
-        glGenTextures(1, &m_tex);
-
     if(m_img) {
+        if(!m_tex)
+            glGenTextures(1, &m_tex);
+
         glBindTexture(GL_TEXTURE_2D, m_tex);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

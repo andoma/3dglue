@@ -13,6 +13,8 @@ namespace g3d {
 struct Camera;
 struct Scene;
 struct VertexBuffer;
+struct IndexBuffer;
+struct Image2D;
 
 struct Object {
     virtual ~Object(){};
@@ -30,6 +32,8 @@ struct Object {
     virtual void addChild(std::shared_ptr<Object> child) {}
 
     virtual void update(const std::shared_ptr<VertexBuffer> &vb) {}
+
+    virtual void update(const std::shared_ptr<Image2D> &tex) {}
 
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 
@@ -50,10 +54,9 @@ std::shared_ptr<Object> makePointCloud(const std::shared_ptr<VertexBuffer> &vb,
 
 std::shared_ptr<Object> makeCross();
 
-struct Mesh;
-
-std::shared_ptr<Object> makeMeshObject(const Mesh &data,
-                                       float normal_color_blend = 0.0f);
+std::shared_ptr<Object> makeMeshObject(const std::shared_ptr<VertexBuffer> &vb,
+                                       const std::vector<glm::ivec3> &ib,
+                                       bool interactive = false);
 
 std::shared_ptr<Object> makeSkybox();
 

@@ -61,49 +61,9 @@ void main()
 
 )glsl";
 
-static const char *bb_vertex_shader = R"glsl(
-
-#version 330 core
-layout (location = 0) in vec3 pos;
-
-uniform mat4 PV;
-uniform mat4 model;
-out vec4 fragmentColor;
-
-void main()
-{
-   gl_Position = PV * model * vec4(pos.xyz, 1);
-}
-
-)glsl";
-
-static const char *bb_fragment_shader = R"glsl(
-
-#version 330 core
-out vec4 FragColor;
-
-void main()
-{
-  FragColor = vec4(1,1,1,1);
-}
-
-)glsl";
-
-#if 0
-static float attribs[][3] = {
-    {-1, -1, -1}, {1, -1, -1},  {1, -1, -1},  {1, 1, -1},  {1, 1, -1},
-    {-1, 1, -1},  {-1, 1, -1},  {-1, -1, -1}, {-1, -1, 1}, {1, -1, 1},
-    {1, -1, 1},   {1, 1, 1},    {1, 1, 1},    {-1, 1, 1},  {-1, 1, 1},
-    {-1, -1, 1},  {-1, -1, -1}, {-1, -1, 1},  {1, -1, -1}, {1, -1, 1},
-    {1, 1, -1},   {1, 1, 1},    {-1, 1, -1},  {-1, 1, 1},
-};
-#endif
-
 namespace g3d {
 
 struct PointCloud : public Object {
-    inline static Shader *s_bb_shader;
-
     std::unique_ptr<Shader> m_shader;
 
     VertexAttribBuffer m_attrib_buf;
@@ -113,14 +73,11 @@ struct PointCloud : public Object {
         m_name = "Pointcloud";
     }
 
+    void update(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
+
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override
     {
-        if(!s_bb_shader) {
-            s_bb_shader = new Shader("pointcloud-bb", NULL, bb_vertex_shader,
-                                     -1, bb_fragment_shader, -1);
-        }
-
         if(m_vb) {
             uint32_t mask = m_vb->get_attribute_mask();
             // Recompile shader if attribute setup changes
@@ -172,55 +129,22 @@ struct PointCloud : public Object {
         glPointSize(m_pointsize);
 
         glEnableVertexAttribArray(0);
-        //        glBindBuffer(GL_ARRAY_BUFFER, m_xyz.m_buffer);
 
         m_attrib_buf.ptr(0, VertexAttribute::Position);
 
-        //        glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, NULL);
-
         if(m_attrib_buf.get_elements(VertexAttribute::Color)) {
             glEnableVertexAttribArray(1);
-            //            glBindBuffer(GL_ARRAY_BUFFER, m_rgb.m_buffer);
-
             m_attrib_buf.ptr(1, VertexAttribute::Color);
-
-            //            glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0,
-            //            NULL);
         }
 
         if(m_attrib_buf.get_elements(VertexAttribute::Aux)) {
             glEnableVertexAttribArray(2);
-            //            glBindBuffer(GL_ARRAY_BUFFER, m_trait.m_buffer);
-            //            glVertexAttribPointer(2, 1, GL_FLOAT, GL_TRUE, 0,
-            //            NULL);
             m_attrib_buf.ptr(2, VertexAttribute::Aux);
         }
         glDrawArrays(GL_POINTS, 0, m_attrib_buf.size());
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
-
-#if 0
-        if(m_bb) {
-            s_bb_shader->use();
-            s_bb_shader->setMat4("PV", cam.m_P * cam.m_V);
-
-            auto m = m_model_matrix;
-
-            m = glm::translate(m, m_bbox_center);
-            m = glm::scale(m, m_bbox_size * 0.5f);
-            s_bb_shader->setMat4("model", m);
-
-            glEnableVertexAttribArray(0);
-
-            glBindBuffer(GL_ARRAY_BUFFER, m_attrib_buf.m_buffer);
-
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void *)NULL);
-
-            glDrawArrays(GL_LINES, 0, 24);
-            glDisableVertexAttribArray(0);
-        }
-#endif
     }
 
     void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,

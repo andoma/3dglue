@@ -1,3 +1,5 @@
+#if 0
+
 #include "mesh.hpp"
 
 #include <memory>
@@ -325,3 +327,4 @@ Mesh::loadSTL(const char *path, const glm::mat4 transform)
 }
 
 }  // namespace g3d
+#endif
