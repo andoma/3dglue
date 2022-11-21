@@ -24,6 +24,7 @@ uniform vec3 bbox1;
 uniform vec3 bbox2;
 uniform float alpha;
 uniform int focused;
+uniform int pointsize;
 uniform vec2 trait_minmax;
 
 out vec4 fragmentColor;
@@ -41,9 +42,9 @@ void main()
 #endif
 
    if(gl_VertexID == focused) {
-     gl_PointSize = 10;
+     gl_PointSize = 10 * pointsize;
    } else {
-     gl_PointSize = 1;
+     gl_PointSize = pointsize;
    }
 
 #ifdef PER_VERTEX_COLOR
@@ -170,7 +171,7 @@ struct PointCloud : public Object {
         s->setInt("focused",
                   scene.m_hit.object == this ? scene.m_hit.primitive : -1);
 
-        glPointSize(m_pointsize);
+        s->setInt("pointsize", m_pointsize);
 
         glEnableVertexAttribArray(0);
 
