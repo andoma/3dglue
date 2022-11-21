@@ -203,6 +203,8 @@ struct PointIntersector : public Intersector {
     PointIntersector(const std::shared_ptr<VertexBuffer>& vb)
     {
         m_bvh.m_vb = vb;
+        if(vb->size() == 0)
+            return;
         m_thread = std::thread([&]() {
             std::vector<int> primitives;
             size_t size = m_bvh.m_vb->size();
