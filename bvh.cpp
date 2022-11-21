@@ -8,6 +8,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <thread>
+#include <atomic>
 
 #include "vertexbuffer.hpp"
 #include "bvh.hpp"
@@ -73,7 +75,7 @@ struct BvhNode {
 template <typename T>
 class BVH : public T {
 public:
-    int build(std::vector<int> primitives, int axis)
+    int build(std::vector<int> primitives, int axis, bool* run)
     {
         BvhNode bn;
         if(primitives.size() <= 2) {
@@ -88,7 +90,7 @@ public:
                 bn.right_box = bn.left_box;
             }
 
-        } else {
+        } else if(*run) {
             std::sort(primitives.begin(), primitives.end(),
                       [&](const auto& a, const auto& b) {
                           return this->get_position(a, 2 - axis) <
@@ -98,11 +100,11 @@ public:
             bn.left = build(
                 std::vector<int>(primitives.begin(),
                                  primitives.begin() + primitives.size() / 2),
-                (axis + 1) % 3);
+                (axis + 1) % 3, run);
             bn.right = build(
                 std::vector<int>(primitives.begin() + primitives.size() / 2,
                                  primitives.end()),
-                (axis + 1) % 3);
+                (axis + 1) % 3, run);
 
             bn.left_box =
                 m_nodes[bn.left].left_box + m_nodes[bn.left].right_box;
@@ -135,7 +137,6 @@ public:
     }
 
     std::vector<BvhNode> m_nodes;
-    int m_start;
 };
 
 class Points {
@@ -188,23 +189,40 @@ using BVHPoints = BVH<Points>;
 struct PointIntersector : public Intersector {
     BVHPoints m_bvh;
 
+    std::thread m_thread;
+
+    bool m_run{true};
+    std::atomic<int> m_start{-1};
+
+    ~PointIntersector()
+    {
+        m_run = false;
+        m_thread.join();
+    }
+
     PointIntersector(const std::shared_ptr<VertexBuffer>& vb)
     {
         m_bvh.m_vb = vb;
-        std::vector<int> primitives;
-        primitives.reserve(vb->size());
-        for(int i = 0; i < vb->size(); i++) {
-            primitives.push_back(i);
-        }
-        m_bvh.m_start = m_bvh.build(primitives, 2);
+        m_thread = std::thread([&]() {
+            std::vector<int> primitives;
+            size_t size = m_bvh.m_vb->size();
+            primitives.reserve(size);
+            for(size_t i = 0; i < size; i++) {
+                primitives.push_back(i);
+            }
+            m_start = m_bvh.build(primitives, 2, &m_run);
+        });
     }
 
     std::optional<std::pair<size_t, glm::vec3>> intersect(
         const glm::vec3& origin, const glm::vec3& direction) const override
     {
+        int start = m_start.load();
+        if(start == -1)
+            return std::nullopt;
         Ray ray{origin, direction, 1.0f / direction};
         HitRecord rec;
-        m_bvh.hit(ray, rec, m_bvh.m_start, loadFloat3(origin),
+        m_bvh.hit(ray, rec, start, loadFloat3(origin),
                   loadFloat3(ray.inv_direction));
 
         if(rec.index == -1)
