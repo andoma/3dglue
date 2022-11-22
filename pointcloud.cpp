@@ -91,7 +91,8 @@ struct PointCloud : public Object {
     {
         if(!m_intersector)
             return;
-        const auto m = parent_mm * m_model_matrix;
+
+        const auto m = m_edit_matrix * parent_mm * m_model_matrix;
 
         const auto m_I = glm::inverse(m);
         const auto o = m_I * glm::vec4(origin, 1);
@@ -149,7 +150,12 @@ struct PointCloud : public Object {
         Shader *s = m_shader.get();
         s->use();
         s->setMat4("PV", cam.m_P * cam.m_V);
-        s->setMat4("model", pt * m_model_matrix);
+
+        auto m = pt * m_model_matrix;
+        if(m_rigid)
+            m = m_edit_matrix * m;
+
+        s->setMat4("model", m);
         s->setVec4("albedo", glm::vec4{glm::vec3{m_color}, 1});
         s->setFloat("alpha", m_alpha);
 
@@ -202,18 +208,20 @@ struct PointCloud : public Object {
 
     void ui(const Scene &scene) override
     {
+        ImGui::Checkbox("Visible", &m_visible);
+
         ImGui::Text("%zd points", m_attrib_buf.size());
-        ImGui::SliderFloat("PointSize", &m_pointsize, 1, 10);
+        ImGui::SliderInt("PointSize", &m_pointsize, 1, 10);
 
         ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
-        ImGui::Checkbox("Visible", &m_visible);
+
         ImGui::Checkbox("Rigid Transform", &m_rigid);
 
         if(m_rigid) {
             ImGui::Text("Translation");
-            ImGui::SliderFloat("X##t", &m_translation.x, -1000, 1000);
-            ImGui::SliderFloat("Y##t", &m_translation.y, -1000, 1000);
-            ImGui::SliderFloat("Z##t", &m_translation.z, -1000, 1000);
+            ImGui::SliderFloat("X##t", &m_translation.x, -50, 50);
+            ImGui::SliderFloat("Y##t", &m_translation.y, -50, 50);
+            ImGui::SliderFloat("Z##t", &m_translation.z, -50, 50);
 
             ImGui::Text("Rotation");
             ImGui::SliderAngle("X##r", &m_rotation.x);
@@ -225,7 +233,7 @@ struct PointCloud : public Object {
             m = glm::rotate(m, m_rotation.x, {1, 0, 0});
             m = glm::rotate(m, m_rotation.y, {0, 1, 0});
             m = glm::rotate(m, m_rotation.z, {0, 0, 1});
-            m_model_matrix = m;
+            m_edit_matrix = m;
         }
 
         ImGui::Checkbox("BoundingBox", &m_bb);
@@ -259,7 +267,7 @@ struct PointCloud : public Object {
     bool m_rigid{false};
     bool m_bb{false};
     float m_alpha{1};
-    float m_pointsize{1};
+    int m_pointsize{1};
 
     bool m_trait_on{false};
     float m_trait_min{0};
@@ -267,6 +275,8 @@ struct PointCloud : public Object {
 
     std::shared_ptr<Intersector> m_intersector;
     const bool m_interactive{false};
+
+    glm::mat4 m_edit_matrix{1};
 };
 
 std::shared_ptr<Object>
