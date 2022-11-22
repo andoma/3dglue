@@ -42,7 +42,7 @@ void main()
 #endif
 
    if(gl_VertexID == focused) {
-     gl_PointSize = 10 * pointsize;
+     gl_PointSize = 10;
    } else {
      gl_PointSize = pointsize;
    }
