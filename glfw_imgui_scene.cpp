@@ -181,6 +181,11 @@ KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 
     ImGuiIO &io = ImGui::GetIO();
     if(!io.WantCaptureMouse) {
+        if(action == GLFW_PRESS) {
+            const char *name = glfwGetKeyName(key, scancode);
+            if(name && s->m_keypress)
+                s->m_keypress(name);
+        }
         return;
     }
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);

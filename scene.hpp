@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <optional>
+#include <functional>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -32,6 +33,8 @@ struct Scene {
     std::optional<glm::vec3> m_lightpos;
 
     Hit m_hit;
+
+    std::function<void(const std::string &keyname)> m_keypress;
 };
 
 std::shared_ptr<Scene> makeGLFWImguiScene(const char *title, int width,
