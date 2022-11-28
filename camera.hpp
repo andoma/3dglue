@@ -35,6 +35,8 @@ struct Camera {
 
     virtual void select(const std::string &preset){};
 
+    virtual void lookat(const glm::vec3 &v){};
+
     float m_fov{45};
 
     glm::mat4 m_P{1};  // Projection

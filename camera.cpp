@@ -186,6 +186,8 @@ struct ArcBallCamera : public PerspectiveCamera {
         }
     }
 
+    void lookat(const glm::vec3 &v) override { m_lookat = v; }
+
     void set(const glm::mat4 &m)
     {
         auto pos = m[3];
