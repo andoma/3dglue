@@ -206,6 +206,12 @@ struct PointCloud : public Object {
         m_color = ambient;
     }
 
+    void set(const std::string &key, float val) override
+    {
+        if(key == "pointsize")
+            m_pointsize = val;
+    }
+
     void ui(const Scene &scene) override
     {
         ImGui::Checkbox("Visible", &m_visible);

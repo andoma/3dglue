@@ -43,6 +43,8 @@ struct Object : public std::enable_shared_from_this<Object> {
 
     virtual void update(const std::shared_ptr<Image2D> &tex) {}
 
+    virtual void set(const std::string &key, float val){};
+
     void setModelMatrix(const glm::mat4 &m) { m_model_matrix = m; }
 
     void setModelMatrixScale(float scale)
