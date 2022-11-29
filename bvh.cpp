@@ -184,10 +184,8 @@ public:
     std::shared_ptr<VertexBuffer> m_vb;
 };
 
-using BVHPoints = BVH<Points>;
-
 struct PointIntersector : public Intersector {
-    BVHPoints m_bvh;
+    BVH<Points> m_bvh;
 
     std::thread m_thread;
 
@@ -233,11 +231,132 @@ struct PointIntersector : public Intersector {
     };
 };
 
+class Triangles {
+protected:
+    int push(int primitive) { return primitive; }
+
+    void hit_primitive(int primitive, const Ray& ray, HitRecord& rec) const
+    {
+        float distance;
+        glm::vec2 bc;
+        const auto t = triangle(primitive);
+
+        if(!glm::intersectRayTriangle(ray.origin, ray.direction, t[0], t[1],
+                                      t[2], bc, distance))
+            return;
+
+        if(distance < rec.distance) {
+            rec.index = primitive;
+            rec.distance = distance;
+            rec.bc = bc;
+        }
+    }
+
+    AABB aabb(int primitive) const
+    {
+        const auto tri = triangle(primitive);
+        return AABB{glm::min(glm::min(tri[0], tri[1]), tri[2]),
+                    glm::max(glm::max(tri[0], tri[1]), tri[2])};
+    }
+
+    float get_position(int primitive, int axis) const
+    {
+        const auto v = (*m_ib)[primitive];
+        const size_t stride = m_vb->get_stride(VertexAttribute::Position);
+        const float* pos = m_vb->get_attributes(VertexAttribute::Position);
+        pos += v.x * stride;
+        return pos[axis];
+    }
+
+public:
+    inline glm::vec3 point(int primitive, const glm::vec2& bc) const
+    {
+        glm::vec3 abc{1.0f - bc.x - bc.y, bc.x, bc.y};
+        return triangle(primitive) * abc;
+    }
+
+    inline glm::mat3 triangle(int primitive) const
+    {
+        const auto v = (*m_ib)[primitive];
+        const size_t stride = m_vb->get_stride(VertexAttribute::Position);
+
+        const float* p = m_vb->get_attributes(VertexAttribute::Position);
+        const float* p0 = p + v.x * stride;
+        const float* p1 = p + v.y * stride;
+        const float* p2 = p + v.z * stride;
+
+        return glm::mat3{glm::vec3{p0[0], p0[1], p0[2]},
+                         glm::vec3{p1[0], p1[1], p1[2]},
+                         glm::vec3{p2[0], p2[1], p2[2]}};
+    }
+
+    std::shared_ptr<VertexBuffer> m_vb;
+    std::shared_ptr<std::vector<glm::ivec3>> m_ib;
+};
+
+struct TriangleIntersector : public Intersector {
+    BVH<Triangles> m_bvh;
+
+    std::thread m_thread;
+
+    bool m_run{true};
+    std::atomic<int> m_start{-1};
+
+    ~TriangleIntersector()
+    {
+        m_run = false;
+        m_thread.join();
+    }
+
+    TriangleIntersector(const std::shared_ptr<VertexBuffer>& vb,
+                        const std::shared_ptr<std::vector<glm::ivec3>>& ib)
+    {
+        m_bvh.m_vb = vb;
+        m_bvh.m_ib = ib;
+        if(vb->size() == 0 || ib->size() == 0)
+            return;
+        m_thread = std::thread([&]() {
+            std::vector<int> primitives;
+            size_t size = m_bvh.m_ib->size();
+            primitives.reserve(size);
+            for(size_t i = 0; i < size; i++) {
+                primitives.push_back(i);
+            }
+            m_start = m_bvh.build(primitives, 2, &m_run);
+        });
+    }
+
+    std::optional<std::pair<size_t, glm::vec3>> intersect(
+        const glm::vec3& origin, const glm::vec3& direction) const override
+    {
+        int start = m_start.load();
+        if(start == -1)
+            return std::nullopt;
+        Ray ray{origin, direction, 1.0f / direction};
+        HitRecord rec;
+        m_bvh.hit(ray, rec, start, loadFloat3(origin),
+                  loadFloat3(ray.inv_direction));
+
+        if(rec.index == -1)
+            return std::nullopt;
+        return std::make_pair(rec.index, m_bvh.point(rec.index, rec.bc));
+    };
+};
+
+
+
 std::shared_ptr<Intersector>
 Intersector::make(const std::shared_ptr<VertexBuffer>& vb,
                   IntersectionMode mode)
 {
     return std::make_shared<PointIntersector>(vb);
+}
+
+std::shared_ptr<Intersector>
+Intersector::make(const std::shared_ptr<VertexBuffer>& vb,
+                  const std::shared_ptr<std::vector<glm::ivec3>>& ib)
+{
+    return std::make_shared<TriangleIntersector>(vb, ib);
 }
 
 }  // namespace g3d

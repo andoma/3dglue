@@ -14,6 +14,10 @@ struct Intersector {
 
     static std::shared_ptr<Intersector> make(
         const std::shared_ptr<VertexBuffer> &vb, IntersectionMode mode);
+
+    static std::shared_ptr<Intersector> make(
+        const std::shared_ptr<VertexBuffer> &vb,
+        const std::shared_ptr<std::vector<glm::ivec3>> &ib);
 };
 
 }  // namespace g3d

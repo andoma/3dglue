@@ -7,6 +7,7 @@
 #include "texture.hpp"
 #include "camera.hpp"
 #include "scene.hpp"
+#include "bvh.hpp"
 
 extern unsigned char phong_vertex_glsl[];
 extern int phong_vertex_glsl_len;
@@ -19,15 +20,47 @@ namespace g3d {
 
 struct Mesh : public Object {
     Mesh(const std::shared_ptr<VertexBuffer> &vb,
-         const std::shared_ptr<std::vector<glm::ivec3>> &ib)
-      : m_vb(vb), m_ib(ib)
+         const std::shared_ptr<std::vector<glm::ivec3>> &ib, bool interactive)
+      : m_vb(vb), m_ib(ib), m_interactive(interactive)
     {
         m_name = "Mesh";
+    }
+
+    void hit(const glm::vec3 &origin, const glm::vec3 &direction,
+             const glm::mat4 &parent_mm, Hit &hit) override
+    {
+        if(!m_intersector)
+            return;
+
+        auto m = parent_mm * m_model_matrix;
+        if(m_rigid)
+            m = m_edit_matrix * m;
+
+        const auto m_I = glm::inverse(m);
+        const auto o = m_I * glm::vec4(origin, 1);
+        const auto dir = glm::normalize(m_I * glm::vec4(direction, 0));
+        const auto res = m_intersector->intersect(o, dir);
+
+        if(res) {
+            auto p = m * glm::vec4(res->second, 1);
+            auto d = glm::distance(glm::vec3(p), origin);
+
+            if(d < hit.distance) {
+                hit.object = this;
+                hit.primitive = res->first;
+                hit.distance = d;
+                hit.world_pos = p;
+            }
+        }
     }
 
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override
     {
+        if(m_interactive && !m_intersector && m_vb && m_ib) {
+            m_intersector = Intersector::make(m_vb, m_ib);
+        }
+
         if(m_ib) {
             m_elements = m_ib->size();
             m_drawcount = m_elements;
@@ -231,11 +264,14 @@ struct Mesh : public Object {
 
     std::shared_ptr<VertexBuffer> m_vb;
     std::shared_ptr<std::vector<glm::ivec3>> m_ib;
+    const bool m_interactive;
 
     bool m_rigid{false};
     glm::vec3 m_translation{0};
     glm::vec3 m_rotation{0};
     glm::mat4 m_edit_matrix{1};
+
+    std::shared_ptr<Intersector> m_intersector;
 };
 
 std::shared_ptr<Object>
@@ -243,7 +279,7 @@ makeMesh(const std::shared_ptr<VertexBuffer> &vb,
          const std::vector<glm::ivec3> &ib, bool interactive)
 {
     auto ibsp = std::make_shared<std::vector<glm::ivec3>>(ib);
-    return std::make_shared<Mesh>(vb, ibsp);
+    return std::make_shared<Mesh>(vb, ibsp, interactive);
 }
 
 }  // namespace g3d
