@@ -297,6 +297,7 @@ GLFWImguiScene::prepare()
     auto cursor_delta = cursor - m_cursor_prev;
 
     m_hit.distance = INFINITY;
+    m_hit.object = nullptr;
 
     if(m_camera != NULL) {
         if(m_left_down) {
@@ -348,9 +349,13 @@ GLFWImguiScene::prepare()
             }
 
             if(ImGui::CollapsingHeader("Measure")) {
-                ImGui::Text("Cur X:% -9.2f Y:% -9.2f Z:% -9.2f",
-                            m_hit.world_pos.x, m_hit.world_pos.y,
-                            m_hit.world_pos.z);
+                if(m_hit.object) {
+                    ImGui::Text("    X:% -9.2f Y:% -9.2f Z:% -9.2f",
+                                m_hit.world_pos.x, m_hit.world_pos.y,
+                                m_hit.world_pos.z);
+                } else {
+                    ImGui::Text("No hit");
+                }
 
                 if(m_p1) {
                     ImGui::Text("P1  X:% -9.2f Y:% -9.2f Z:% -9.2f", m_p1->x,
