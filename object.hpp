@@ -64,9 +64,9 @@ std::shared_ptr<Object> makePointCloud(const std::shared_ptr<VertexBuffer> &vb,
 
 std::shared_ptr<Object> makeCross();
 
-std::shared_ptr<Object> makeMeshObject(const std::shared_ptr<VertexBuffer> &vb,
-                                       const std::vector<glm::ivec3> &ib,
-                                       bool interactive = false);
+std::shared_ptr<Object> makeMesh(const std::shared_ptr<VertexBuffer> &vb,
+                                 const std::vector<glm::ivec3> &ib,
+                                 bool interactive = false);
 
 std::shared_ptr<Object> makeSkybox();
 
