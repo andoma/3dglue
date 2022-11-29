@@ -47,7 +47,7 @@ struct Mesh : public Object {
                          "#version 330 core\n"
                          "%s%s%s",
                          m_vb->get_elements(VertexAttribute::Normal)
-                             ? "#define PER_VERTEX_NORMALS\n"
+                             ? "#define PER_VERTEX_NORMAL\n"
                              : "",
                          m_vb->get_elements(VertexAttribute::Color)
                              ? "#define PER_VERTEX_COLOR\n"
@@ -76,12 +76,13 @@ struct Mesh : public Object {
 
         s->use();
 
-        auto m = glm::translate(m_model_matrix, m_translation);
+        auto m = pt * m_model_matrix;
+        if(m_rigid)
+            m = m_edit_matrix * m;
 
-        s->setMat4("PVM", cam.m_P * cam.m_V * pt * m);
-
+        s->setMat4("PVM", cam.m_P * cam.m_V * m);
         if(s->has_uniform("M")) {
-            s->setMat4("M", pt * m);
+            s->setMat4("M", m);
         }
 
         if(m_attrib_buf.get_elements(VertexAttribute::Color)) {
@@ -168,10 +169,27 @@ struct Mesh : public Object {
         if(m_elements) {
             ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements);
         }
-        ImGui::Text("Translation");
-        ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
-        ImGui::SliderFloat("Y##t", &m_translation.y, -5000, 5000);
-        ImGui::SliderFloat("Z##t", &m_translation.z, -5000, 5000);
+
+        ImGui::Checkbox("Rigid Transform", &m_rigid);
+
+        if(m_rigid) {
+            ImGui::Text("Translation");
+            ImGui::SliderFloat("X##t", &m_translation.x, -50, 50);
+            ImGui::SliderFloat("Y##t", &m_translation.y, -50, 50);
+            ImGui::SliderFloat("Z##t", &m_translation.z, -50, 50);
+
+            ImGui::Text("Rotation");
+            ImGui::SliderAngle("X##r", &m_rotation.x);
+            ImGui::SliderAngle("Y##r", &m_rotation.y);
+            ImGui::SliderAngle("Z##r", &m_rotation.z);
+
+            auto m = glm::mat4(1);
+            m = glm::translate(m, m_translation);
+            m = glm::rotate(m, m_rotation.x, {1, 0, 0});
+            m = glm::rotate(m, m_rotation.y, {0, 1, 0});
+            m = glm::rotate(m, m_rotation.z, {0, 0, 1});
+            m_edit_matrix = m;
+        }
     }
 
     void setColor(const glm::vec4 &ambient, const glm::vec4 &diffuse,
@@ -182,10 +200,7 @@ struct Mesh : public Object {
         m_specular = specular;
     }
 
-    void update(const std::shared_ptr<Image2D> &img) override
-    {
-        m_tex0.set(img);
-    }
+    void set(const std::shared_ptr<Image2D> &img) override { m_tex0.set(img); }
 
     void set(const std::string &key, float val) override
     {
@@ -214,10 +229,13 @@ struct Mesh : public Object {
 
     Texture2D m_tex0;
 
-    glm::vec3 m_translation{0};
-
     std::shared_ptr<VertexBuffer> m_vb;
     std::shared_ptr<std::vector<glm::ivec3>> m_ib;
+
+    bool m_rigid{false};
+    glm::vec3 m_translation{0};
+    glm::vec3 m_rotation{0};
+    glm::mat4 m_edit_matrix{1};
 };
 
 std::shared_ptr<Object>

@@ -112,7 +112,7 @@ struct PointCloud : public Object {
         }
     }
 
-    void update(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
+    void set(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
 
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override

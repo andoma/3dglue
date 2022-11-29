@@ -87,7 +87,7 @@ struct Lines : public Object {
         ImGui::SliderInt("DrawCount", &m_draw_count, 0, m_attrib_buf.size());
     }
 
-    void update(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
+    void set(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
 
     const GLenum m_mode;
     std::shared_ptr<VertexBuffer> m_vb;
