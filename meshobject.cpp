@@ -30,6 +30,7 @@ struct MeshObject : public Object {
     {
         if(m_ib) {
             m_elements = m_ib->size();
+            m_drawcount = m_elements;
             m_index_buf.write((void *)m_ib->data(),
                               m_ib->size() * sizeof(glm::ivec3));
             m_ib.reset();
@@ -165,7 +166,7 @@ struct MeshObject : public Object {
         ImGui::SliderFloat("Normals", &m_normal_colorize, 0, 1);
 
         if(m_elements) {
-            ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements / 3);
+            ImGui::SliderInt("DrawCount", &m_drawcount, 0, m_elements);
         }
         ImGui::Text("Translation");
         ImGui::SliderFloat("X##t", &m_translation.x, -5000, 5000);
@@ -184,6 +185,14 @@ struct MeshObject : public Object {
     void update(const std::shared_ptr<Image2D> &img) override
     {
         m_tex0.set(img);
+    }
+
+    void set(const std::string &key, float val) override
+    {
+        if(key == "vertexcolor")
+            m_colorize = val;
+        if(key == "normalcolors")
+            m_normal_colorize = val;
     }
 
     VertexAttribBuffer m_attrib_buf;
