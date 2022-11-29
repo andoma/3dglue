@@ -92,7 +92,9 @@ struct PointCloud : public Object {
         if(!m_intersector)
             return;
 
-        const auto m = m_edit_matrix * parent_mm * m_model_matrix;
+        auto m = parent_mm * m_model_matrix;
+        if(m_rigid)
+            m = m_edit_matrix * m;
 
         const auto m_I = glm::inverse(m);
         const auto o = m_I * glm::vec4(origin, 1);
