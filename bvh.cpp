@@ -1,6 +1,3 @@
-#include <xmmintrin.h>
-#include <smmintrin.h>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -13,6 +10,8 @@
 
 #include "vertexbuffer.hpp"
 #include "bvh.hpp"
+
+#include "simd.hpp"
 
 namespace g3d {
 
@@ -28,21 +27,13 @@ struct HitRecord {
     glm::vec2 bc;
 };
 
-inline __m128
-loadFloat3(const glm::vec3& pos)
-{
-    return _mm_set_ps(0, pos.z, pos.y, pos.x);
-}
-
 struct AABB {
-    inline bool hit(__m128 origin, __m128 idir) const
+    inline bool hit(float4 origin, float4 idir) const
     {
-        __m128 min = loadFloat3(m_min);
-        __m128 max = loadFloat3(m_max);
-        min = (min - origin) * idir;
-        max = (max - origin) * idir;
-        __m128 mi = _mm_min_ps(min, max);
-        __m128 ma = _mm_max_ps(min, max);
+        float4 pmin = (m_min - origin) * idir;
+        float4 pmax = (m_max - origin) * idir;
+        float4 mi = min(pmin, pmax);
+        float4 ma = max(pmin, pmax);
 
         float tmax = glm::min(glm::min(ma[0], ma[1]), ma[2]);
         if(tmax < 0) {
@@ -58,11 +49,11 @@ struct AABB {
 
     inline AABB operator+(const AABB& o)
     {
-        return AABB{glm::min(m_min, o.m_min), glm::max(m_max, o.m_max)};
+        return AABB{min(m_min, o.m_min), max(m_max, o.m_max)};
     }
 
-    glm::vec3 m_min{NAN};
-    glm::vec3 m_max{NAN};
+    float4 m_min;
+    float4 m_max;
 };
 
 struct BvhNode {
@@ -117,8 +108,8 @@ public:
         return (int)r;
     }
 
-    void hit(const Ray& ray, HitRecord& rec, int index, __m128 origin,
-             __m128 invD) const
+    void hit(const Ray& ray, HitRecord& rec, int index, float4 origin,
+             float4 invD) const
     {
         if(index < 0) {
             // Negative index, intersecting a primitive
@@ -163,7 +154,7 @@ protected:
     {
         auto center = point(primitive);
         glm::vec3 d{m_radii};
-        return AABB{center - d, center + d};
+        return AABB{from(center - d), from(center + d)};
     }
 
     float get_position(int primitive, int axis) const
@@ -222,8 +213,7 @@ struct PointIntersector : public Intersector {
             return std::nullopt;
         Ray ray{origin, direction, 1.0f / direction};
         HitRecord rec;
-        m_bvh.hit(ray, rec, start, loadFloat3(origin),
-                  loadFloat3(ray.inv_direction));
+        m_bvh.hit(ray, rec, start, from(origin), from(ray.inv_direction));
 
         if(rec.index == -1)
             return std::nullopt;
@@ -255,8 +245,10 @@ protected:
     AABB aabb(int primitive) const
     {
         const auto tri = triangle(primitive);
-        return AABB{glm::min(glm::min(tri[0], tri[1]), tri[2]),
-                    glm::max(glm::max(tri[0], tri[1]), tri[2])};
+        float4 p0 = from(tri[0]);
+        float4 p1 = from(tri[1]);
+        float4 p2 = from(tri[2]);
+        return AABB{min(p0, p1, p2), max(p0, p1, p2)};
     }
 
     float get_position(int primitive, int axis) const
@@ -334,8 +326,7 @@ struct TriangleIntersector : public Intersector {
             return std::nullopt;
         Ray ray{origin, direction, 1.0f / direction};
         HitRecord rec;
-        m_bvh.hit(ray, rec, start, loadFloat3(origin),
-                  loadFloat3(ray.inv_direction));
+        m_bvh.hit(ray, rec, start, from(origin), from(ray.inv_direction));
 
         if(rec.index == -1)
             return std::nullopt;
