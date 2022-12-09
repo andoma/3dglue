@@ -3,7 +3,6 @@
 #include "shader.hpp"
 #include "vertexbuffer.hpp"
 #include "arraybuffer.hpp"
-#include "mesh.hpp"
 #include "texture.hpp"
 #include "camera.hpp"
 #include "scene.hpp"
