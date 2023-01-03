@@ -242,6 +242,8 @@ struct Mesh : public Object {
             m_normal_colorize = val;
     }
 
+    void set(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
+
     VertexAttribBuffer m_attrib_buf;
     ArrayBuffer m_index_buf{GL_ELEMENT_ARRAY_BUFFER};
 
