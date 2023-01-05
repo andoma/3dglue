@@ -4,17 +4,11 @@
 
 #include <glm/glm.hpp>
 
+#include "object.hpp"
+
 namespace g3d {
 
 struct Camera {
-    enum class Control {
-        DRAG1,
-        DRAG2,
-        DRAG3,
-        DRAG4,
-        SCROLL,
-    };
-
     virtual ~Camera(){};
 
     virtual void ui(){};

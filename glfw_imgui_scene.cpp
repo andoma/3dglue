@@ -28,6 +28,8 @@ struct GLFWImguiScene : public Scene {
 
     glm::vec2 normalizedCursor();
 
+    void drag(Control c, const glm::vec2 &xy);
+
     GLFWwindow *m_window;
     unsigned int m_width;
     unsigned int m_height;
@@ -141,7 +143,7 @@ ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
         if(s->m_camera == NULL)
             return;
         float scale = s->m_shift_down ? 0.1f : 1.0f;
-        s->m_camera->uiInput(Camera::Control::SCROLL,
+        s->m_camera->uiInput(Control::SCROLL,
                              glm::vec2{-xoffset, yoffset} * scale);
         return;
     }
@@ -272,6 +274,16 @@ GLFWImguiScene::~GLFWImguiScene()
     glfwTerminate();
 }
 
+void
+GLFWImguiScene::drag(Control c, const glm::vec2 &xy)
+{
+    if(m_hit.object) {
+        if(m_hit.object->uiInput(*this, c, xy))
+            return;
+    }
+    m_camera->uiInput(c, xy);
+}
+
 bool
 GLFWImguiScene::prepare()
 {
@@ -296,23 +308,20 @@ GLFWImguiScene::prepare()
     auto cursor = normalizedCursor();
     auto cursor_delta = cursor - m_cursor_prev;
 
-    m_hit.distance = INFINITY;
-    m_hit.object = nullptr;
-
     if(m_camera != NULL) {
         if(m_left_down) {
             if(m_ctrl_down) {
-                m_camera->uiInput(Camera::Control::DRAG3, cursor_delta);
+                drag(Control::DRAG3, cursor_delta);
             } else if(m_shift_down) {
-                m_camera->uiInput(Camera::Control::DRAG2, cursor_delta);
+                drag(Control::DRAG2, cursor_delta);
             } else {
-                m_camera->uiInput(Camera::Control::DRAG1, cursor_delta);
+                drag(Control::DRAG1, cursor_delta);
             }
         } else if(m_right_down) {
             if(m_shift_down) {
-                m_camera->uiInput(Camera::Control::DRAG4, cursor_delta);
+                drag(Control::DRAG4, cursor_delta);
             } else {
-                m_camera->uiInput(Camera::Control::DRAG3, cursor_delta);
+                drag(Control::DRAG3, cursor_delta);
             }
         }
 
@@ -324,6 +333,9 @@ GLFWImguiScene::prepare()
         auto screenpos = glm::vec4(cursor.x, -cursor.y, 1.0f, 1.0f);
         auto worldpos = VPI * screenpos;
         auto dir = glm::normalize(glm::vec3(worldpos));
+
+        m_hit.distance = INFINITY;
+        m_hit.object = nullptr;
 
         for(auto &o : m_objects) {
             if(o->m_visible) {

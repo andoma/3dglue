@@ -7,17 +7,11 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "object.hpp"
+
 namespace g3d {
 
-struct Object;
 struct Camera;
-
-struct Hit {
-    Object *object;
-    float distance;
-    size_t primitive;
-    glm::vec3 world_pos;
-};
 
 struct Scene {
     virtual ~Scene(){};

@@ -16,7 +16,21 @@ struct VertexBuffer;
 struct IndexBuffer;
 struct Image2D;
 struct Object;
-struct Hit;
+
+struct Hit {
+    Object *object;
+    float distance;
+    size_t primitive;
+    glm::vec3 world_pos;
+};
+
+enum class Control {
+    DRAG1,
+    DRAG2,
+    DRAG3,
+    DRAG4,
+    SCROLL,
+};
 
 struct Object : public std::enable_shared_from_this<Object> {
     virtual ~Object(){};
@@ -50,6 +64,12 @@ struct Object : public std::enable_shared_from_this<Object> {
     void setModelMatrixScale(float scale)
     {
         m_model_matrix = glm::scale(glm::mat4{1}, {scale, scale, scale});
+    }
+
+    virtual bool uiInput(const g3d::Scene &scene, Control c,
+                         const glm::vec2 &xy)
+    {
+        return false;
     }
 
     glm::mat4 m_model_matrix{1};
