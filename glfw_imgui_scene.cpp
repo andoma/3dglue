@@ -13,6 +13,17 @@
 
 namespace g3d {
 
+struct Scene;
+
+struct Grab {
+    bool m_on{false};
+    Hit m_hit;
+
+    void release() { m_on = false;}
+
+    void press(Scene &s, Control sense);
+};
+
 struct GLFWImguiScene : public Scene {
     GLFWImguiScene(const char *title, int width, int height, float ground_size);
 
@@ -28,7 +39,7 @@ struct GLFWImguiScene : public Scene {
 
     glm::vec2 normalizedCursor();
 
-    void drag(Control c, const glm::vec2 &xy);
+    void drag(Control c, const glm::vec2 &xy, Grab &g);
 
     GLFWwindow *m_window;
     unsigned int m_width;
@@ -42,9 +53,9 @@ struct GLFWImguiScene : public Scene {
 
     glm::vec2 m_cursor_prev{0};
 
-    bool m_left_down{false};
+    Grab m_left_grab;
 
-    bool m_right_down{false};
+    Grab m_right_grab;
 
     bool m_shift_down{false};
 
@@ -69,6 +80,19 @@ struct GLFWImguiScene : public Scene {
     std::optional<glm::vec3> m_p2;
     std::shared_ptr<Object> m_p2_crosshair;
 };
+
+
+void Grab::press(Scene &s, Control sense)
+{
+    if(s.m_hit.object &&
+       s.m_hit.object->uiInput(s.m_hit, sense, {}, s.m_camera->orientation())) {
+        m_hit = s.m_hit;
+    } else {
+        m_hit.object = nullptr;
+    }
+    m_on = true;
+}
+
 
 void
 GLFWImguiScene::save_frame(void)
@@ -116,17 +140,17 @@ MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
             if(s->m_alt_down) {
                 s->mark();
             }
-
-            s->m_left_down = true;
+            s->m_left_grab.press(*s, Control::LEFT_SENSE);
         }
         if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-            s->m_left_down = false;
+            s->m_left_grab.release();
         }
         if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-            s->m_right_down = true;
+            s->m_right_grab.press(*s, Control::RIGHT_SENSE);
         }
         if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
-            s->m_right_down = false;
+            s->m_right_grab.release();
+
         }
         return;
     }
@@ -275,11 +299,13 @@ GLFWImguiScene::~GLFWImguiScene()
 }
 
 void
-GLFWImguiScene::drag(Control c, const glm::vec2 &xy)
+GLFWImguiScene::drag(Control c, const glm::vec2 &xy, Grab &g)
 {
-    if(m_hit.object) {
-        if(m_hit.object->uiInput(*this, c, xy))
-            return;
+    static int cnt;
+    if(g.m_hit.object) {
+        g.m_hit.object->uiInput(g.m_hit, c, xy,
+                                m_camera->orientation());
+        return;
     }
     m_camera->uiInput(c, xy);
 }
@@ -309,21 +335,6 @@ GLFWImguiScene::prepare()
     auto cursor_delta = cursor - m_cursor_prev;
 
     if(m_camera != NULL) {
-        if(m_left_down) {
-            if(m_ctrl_down) {
-                drag(Control::DRAG3, cursor_delta);
-            } else if(m_shift_down) {
-                drag(Control::DRAG2, cursor_delta);
-            } else {
-                drag(Control::DRAG1, cursor_delta);
-            }
-        } else if(m_right_down) {
-            if(m_shift_down) {
-                drag(Control::DRAG4, cursor_delta);
-            } else {
-                drag(Control::DRAG3, cursor_delta);
-            }
-        }
 
         m_camera->update(m_width * m_scene_editor_start, m_height);
 
@@ -334,14 +345,33 @@ GLFWImguiScene::prepare()
         auto worldpos = VPI * screenpos;
         auto dir = glm::normalize(glm::vec3(worldpos));
 
-        m_hit.distance = INFINITY;
-        m_hit.object = nullptr;
-
-        for(auto &o : m_objects) {
-            if(o->m_visible) {
-                o->hit(origin, dir, glm::mat4{1}, m_hit);
+        if(!m_left_grab.m_on && !m_right_grab.m_on) {
+            m_hit.distance = INFINITY;
+            m_hit.object = nullptr;
+            for(auto &o : m_objects) {
+                if(o->m_visible) {
+                    o->hit(origin, dir, glm::mat4{1}, m_hit);
+                }
             }
         }
+
+        if(m_left_grab.m_on) {
+            if(m_ctrl_down) {
+                drag(Control::DRAG3, cursor_delta, m_left_grab);
+            } else if(m_shift_down) {
+                drag(Control::DRAG2, cursor_delta, m_left_grab);
+            } else {
+                drag(Control::DRAG1, cursor_delta, m_left_grab);
+            }
+        } else if(m_right_grab.m_on) {
+            if(m_shift_down) {
+                drag(Control::DRAG4, cursor_delta, m_right_grab);
+            } else {
+                drag(Control::DRAG3, cursor_delta, m_right_grab);
+            }
+        }
+
+
 
         if(ImGui::Begin("Scene")) {
             ImGui::Checkbox("Record", &m_record);

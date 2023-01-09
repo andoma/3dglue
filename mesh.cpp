@@ -23,6 +23,8 @@ struct Mesh : public Object {
       : m_vb(vb), m_ib(ib), m_interactive(interactive)
     {
         m_name = "Mesh";
+        if(ib)
+            m_update_index_buffer = true;
     }
 
     void hit(const glm::vec3 &origin, const glm::vec3 &direction,
@@ -56,19 +58,19 @@ struct Mesh : public Object {
     void draw(const Scene &scene, const Camera &cam,
               const glm::mat4 &pt) override
     {
-        if(m_interactive && !m_intersector && m_vb && m_ib) {
-            m_intersector = Intersector::make(m_vb, m_ib);
-        }
-
-        if(m_ib) {
+        if(m_update_index_buffer) {
+            m_update_index_buffer = false;
             m_elements = m_ib->size();
             m_drawcount = m_elements;
             m_index_buf.write((void *)m_ib->data(),
                               m_ib->size() * sizeof(glm::ivec3));
-            m_ib.reset();
         }
 
         if(m_vb) {
+            if(m_interactive && m_ib) {
+                m_intersector = Intersector::make(m_vb, m_ib);
+            }
+
             uint32_t mask = m_vb->get_attribute_mask();
 
             // Recompile shader if attribute setup changes
@@ -273,6 +275,8 @@ struct Mesh : public Object {
     glm::mat4 m_edit_matrix{1};
 
     std::shared_ptr<Intersector> m_intersector;
+
+    bool m_update_index_buffer{false};
 };
 
 std::shared_ptr<Object>

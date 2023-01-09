@@ -30,6 +30,8 @@ enum class Control {
     DRAG3,
     DRAG4,
     SCROLL,
+    LEFT_SENSE,
+    RIGHT_SENSE,
 };
 
 struct Object : public std::enable_shared_from_this<Object> {
@@ -66,8 +68,8 @@ struct Object : public std::enable_shared_from_this<Object> {
         m_model_matrix = glm::scale(glm::mat4{1}, {scale, scale, scale});
     }
 
-    virtual bool uiInput(const g3d::Scene &scene, Control c,
-                         const glm::vec2 &xy)
+    virtual bool uiInput(const Hit &hit, Control c, const glm::vec2 &xy,
+                         const glm::quat &orientation)
     {
         return false;
     }
