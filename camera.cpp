@@ -29,6 +29,23 @@ struct PerspectiveCamera : public Camera {
                              viewport_width / viewport_height, m_znear, m_zfar);
     }
 
+    glm::quat orientation() const override
+    {
+        glm::vec3 scale;
+        glm::quat orientation;
+        glm::vec3 translation;
+        glm::vec3 skew;
+        glm::vec4 perspective;
+
+        // Adjust for z-is-up
+        // This generates an identity quat if we look straight down the
+        // positive Y axis
+        auto m = glm::rotate(m_V, (float)(M_PI / 2), glm::vec3{1, 0, 0});
+
+        glm::decompose(m, scale, orientation, translation, skew, perspective);
+        return orientation;
+    }
+
     float m_fov;
     const float m_znear;
     const float m_zfar;
