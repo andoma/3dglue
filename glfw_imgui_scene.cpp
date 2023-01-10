@@ -85,7 +85,7 @@ struct GLFWImguiScene : public Scene {
 void Grab::press(Scene &s, Control sense)
 {
     if(s.m_hit.object &&
-       s.m_hit.object->uiInput(s.m_hit, sense, {}, s.m_camera->orientation())) {
+       s.m_hit.object->uiInput(s.m_hit, sense, {}, *s.m_camera)) {
         m_hit = s.m_hit;
     } else {
         m_hit.object = nullptr;
@@ -313,8 +313,7 @@ GLFWImguiScene::drag(Control c, const glm::vec2 &xy, Grab &g)
 {
     static int cnt;
     if(g.m_hit.object) {
-        g.m_hit.object->uiInput(g.m_hit, c, xy,
-                                m_camera->orientation());
+        g.m_hit.object->uiInput(g.m_hit, c, xy, *m_camera);
         return;
     }
     m_camera->uiInput(c, xy);

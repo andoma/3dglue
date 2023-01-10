@@ -21,6 +21,8 @@ struct Camera {
 
     glm::vec3 position() const { return m_VI[3]; }
 
+    virtual glm::quat rotation() const = 0;
+
     virtual void positionStore(int slot){};
 
     virtual void positionRecall(int slot){};
@@ -30,8 +32,6 @@ struct Camera {
     virtual void select(const std::string &preset){};
 
     virtual void lookat(const glm::vec3 &v){};
-
-    virtual glm::quat orientation() const = 0;
 
     float m_fov{45};
 

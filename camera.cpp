@@ -29,7 +29,7 @@ struct PerspectiveCamera : public Camera {
                              viewport_width / viewport_height, m_znear, m_zfar);
     }
 
-    glm::quat orientation() const override
+    glm::quat rotation() const override
     {
         glm::vec3 scale;
         glm::quat orientation;
@@ -40,8 +40,7 @@ struct PerspectiveCamera : public Camera {
         // Adjust for z-is-up
         // This generates an identity quat if we look straight down the
         // positive Y axis
-        auto m = glm::rotate(m_V, (float)(M_PI / 2), glm::vec3{1, 0, 0});
-
+        auto m = glm::rotate(m_VI, (float)(M_PI / 2), glm::vec3{1, 0, 0});
         glm::decompose(m, scale, orientation, translation, skew, perspective);
         return orientation;
     }
@@ -190,15 +189,15 @@ struct ArcBallCamera : public PerspectiveCamera {
             break;
 
         case Control::DRAG3:
-            m_lookat += glm::vec3(
-                glm::mat4_cast(m_rotation) *
-                glm::vec4{-m_distance * xy.x, m_distance * xy.y, 0, 1});
+            m_lookat +=
+                glm::vec3(glm::mat3_cast(m_rotation) *
+                          glm::vec3{-m_distance * xy.x, m_distance * xy.y, 0});
             break;
 
         case Control::DRAG4:
-            m_lookat += glm::vec3(
-                glm::mat4_cast(m_rotation) *
-                glm::vec4{-m_distance * xy.x, 0, m_distance * xy.y, 1});
+            m_lookat +=
+                glm::vec3(glm::mat3_cast(m_rotation) *
+                          glm::vec3{-m_distance * xy.x, 0, m_distance * xy.y});
             break;
         }
     }

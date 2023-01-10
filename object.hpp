@@ -69,7 +69,7 @@ struct Object : public std::enable_shared_from_this<Object> {
     }
 
     virtual bool uiInput(const Hit &hit, Control c, const glm::vec2 &xy,
-                         const glm::quat &orientation)
+                         const Camera &cam)
     {
         return false;
     }
