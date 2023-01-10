@@ -192,7 +192,17 @@ KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
     }
 
     if(s->m_camera != NULL) {
-        if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
+        float theta = 0.5f;
+        Control c = s->m_shift_down ? Control::DRAG2 : Control::DRAG1;
+        if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
+            s->m_camera->uiInput(c, {-theta,0});
+        } else if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+            s->m_camera->uiInput(c, {theta,0});
+        } else if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
+            s->m_camera->uiInput(c, {0,theta});
+        } else if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
+            s->m_camera->uiInput(c, {0,-theta});
+        } else if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
             int slot = key - GLFW_KEY_F1;
             if(action == GLFW_PRESS) {
                 if(mods & GLFW_MOD_SHIFT) {
