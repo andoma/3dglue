@@ -116,7 +116,7 @@ struct ArcBallCamera : public PerspectiveCamera {
         ImGui::Text("X:% -9.2f Y:% -9.2f Z:% -9.2f", position.x, position.y,
                     position.z);
         ImGui::Text("Distance:%9.2f", m_distance);
-        ImGui::Text("Yaw:% 6.1f°  Pitch:% 6.1f°  Roll:% 6.1f°", euler.x,
+        ImGui::Text("Pitch:% 6.1f°  Yaw:% 6.1f°  Roll:% 6.1f°", euler.x,
                     euler.y, euler.z);
         ImGui::Checkbox("AutoRotate", &m_autorotate);
         ImGui::Unindent();
