@@ -100,6 +100,9 @@ std::shared_ptr<Object> makeLines(const std::vector<glm::vec3> &lines);
 
 std::shared_ptr<Object> makeLineStrip(const std::vector<glm::vec3> &lines);
 
+std::shared_ptr<Object> makeLines(const std::shared_ptr<VertexBuffer> &vb,
+                                  const std::vector<glm::ivec2> &ib);
+
 std::shared_ptr<Object> makeGroup(const char *name);
 
 }  // namespace g3d

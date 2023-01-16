@@ -41,8 +41,9 @@ namespace g3d {
 struct Lines : public Object {
     inline static Shader *s_shader;
 
-    Lines(GLenum mode, const std::shared_ptr<VertexBuffer> &vb)
-      : m_mode(mode), m_vb(vb)
+    Lines(GLenum mode, const std::shared_ptr<VertexBuffer> &vb,
+          const std::shared_ptr<std::vector<glm::ivec2>> &ib)
+      : m_mode(mode), m_vb(vb), m_ib(ib)
     {
         m_name = "Lines";
     }
@@ -63,7 +64,13 @@ struct Lines : public Object {
         if(m_vb) {
             m_attrib_buf.load(*m_vb);
             m_vb.reset();
-            m_draw_count = m_attrib_buf.size();
+        }
+
+        if(m_ib) {
+            m_draw_count = m_ib->size();
+            m_index_buf.write((void *)m_ib->data(),
+                              m_ib->size() * sizeof(glm::ivec2));
+            m_ib.reset();
         }
 
         if(!m_attrib_buf.bind())
@@ -71,7 +78,13 @@ struct Lines : public Object {
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 0, (void *)NULL);
-        glDrawArrays(m_mode, 0, m_draw_count);
+
+        if(m_index_buf.bind()) {
+            glDrawElements(m_mode, m_draw_count * 2, GL_UNSIGNED_INT, NULL);
+        } else {
+            glDrawArrays(m_mode, 0, m_attrib_buf.size());
+        }
+
         glDisableVertexAttribArray(0);
     }
 
@@ -84,14 +97,18 @@ struct Lines : public Object {
     void ui(const Scene &scene) override
     {
         ImGui::Checkbox("Visible", &m_visible);
-        ImGui::SliderInt("DrawCount", &m_draw_count, 0, m_attrib_buf.size());
+        //        ImGui::SliderInt("DrawCount", &m_draw_count, 0,
+        //        m_attrib_buf.size());
     }
 
     void set(const std::shared_ptr<VertexBuffer> &vb) override { m_vb = vb; }
 
     const GLenum m_mode;
     std::shared_ptr<VertexBuffer> m_vb;
+    std::shared_ptr<std::vector<glm::ivec2>> m_ib;
+
     VertexAttribBuffer m_attrib_buf;
+    ArrayBuffer m_index_buf{GL_ELEMENT_ARRAY_BUFFER};
 
     glm::vec4 m_color{1};
     int m_draw_count{0};
@@ -100,7 +117,16 @@ struct Lines : public Object {
 std::shared_ptr<Object>
 makeLines(const std::vector<glm::vec3> &lines)
 {
-    return std::make_shared<Lines>(GL_LINES, VertexBuffer::make(lines));
+    return std::make_shared<Lines>(GL_LINES, VertexBuffer::make(lines),
+                                   nullptr);
+}
+
+std::shared_ptr<Object>
+makeLines(const std::shared_ptr<VertexBuffer> &vb,
+          const std::vector<glm::ivec2> &ib)
+{
+    return std::make_shared<Lines>(
+        GL_LINES, vb, std::make_shared<std::vector<glm::ivec2>>(ib));
 }
 
 std::shared_ptr<Object>
@@ -113,8 +139,8 @@ makeLine(const glm::vec3 segment[2])
 std::shared_ptr<Object>
 makeLineStrip(const std::vector<glm::vec3> &linestrip)
 {
-    return std::make_shared<Lines>(GL_LINE_STRIP,
-                                   VertexBuffer::make(linestrip));
+    return std::make_shared<Lines>(GL_LINE_STRIP, VertexBuffer::make(linestrip),
+                                   nullptr);
 }
 
 }  // namespace g3d
