@@ -220,7 +220,7 @@ struct ArcBallCamera : public PerspectiveCamera {
             set(it->second);
     }
 
-    void positionStore(int slot) override
+    void transformStore(int slot) override
     {
         mkdir(".3dglue", 0777);
 
@@ -233,7 +233,7 @@ struct ArcBallCamera : public PerspectiveCamera {
         fclose(fp);
     }
 
-    void positionRecall(int slot) override
+    void transformRecall(int slot) override
     {
         char name[PATH_MAX];
         snprintf(name, sizeof(name), ".3dglue/arcballcam%d", slot);

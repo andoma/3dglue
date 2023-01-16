@@ -195,20 +195,20 @@ KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
         float theta = 0.5f;
         Control c = s->m_shift_down ? Control::DRAG2 : Control::DRAG1;
         if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-            s->m_camera->uiInput(c, {-theta,0});
+            s->m_camera->uiInput(c, {-theta, 0});
         } else if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-            s->m_camera->uiInput(c, {theta,0});
+            s->m_camera->uiInput(c, {theta, 0});
         } else if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
-            s->m_camera->uiInput(c, {0,theta});
+            s->m_camera->uiInput(c, {0, theta});
         } else if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-            s->m_camera->uiInput(c, {0,-theta});
+            s->m_camera->uiInput(c, {0, -theta});
         } else if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
             int slot = key - GLFW_KEY_F1;
             if(action == GLFW_PRESS) {
                 if(mods & GLFW_MOD_SHIFT) {
-                    s->m_camera->positionStore(slot);
+                    s->m_camera->transformStore(slot);
                 } else {
-                    s->m_camera->positionRecall(slot);
+                    s->m_camera->transformRecall(slot);
                 }
                 return;
             }
@@ -344,11 +344,9 @@ GLFWImguiScene::prepare()
     auto cursor_delta = cursor - m_cursor_prev;
 
     if(m_camera != NULL) {
-
         m_camera->update(m_width * m_scene_editor_start, m_height);
 
         auto origin = glm::vec3(m_camera->m_VI[3]);
-        auto cursor = normalizedCursor();
         auto VPI = glm::inverse(m_camera->m_P * m_camera->m_V);
         auto screenpos = glm::vec4(cursor.x, -cursor.y, 1.0f, 1.0f);
         auto worldpos = VPI * screenpos;
@@ -379,8 +377,6 @@ GLFWImguiScene::prepare()
                 drag(Control::DRAG3, cursor_delta, m_right_grab);
             }
         }
-
-
 
         if(ImGui::Begin("Scene")) {
             ImGui::Checkbox("Record", &m_record);

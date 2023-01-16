@@ -19,13 +19,13 @@ struct Camera {
 
     virtual glm::vec3 lookAt() const = 0;
 
-    glm::vec3 position() const { return m_VI[3]; }
+    glm::vec3 origin() const { return m_VI[3]; }
 
     virtual glm::quat rotation() const = 0;
 
-    virtual void positionStore(int slot){};
+    virtual void transformStore(int slot){};
 
-    virtual void positionRecall(int slot){};
+    virtual void transformRecall(int slot){};
 
     virtual void uiInput(Control c, const glm::vec2 &xy){};
 
