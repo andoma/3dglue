@@ -14,6 +14,15 @@
 
 namespace g3d {
 
+glm::vec3
+Camera::direction(const glm::vec2 &xy) const
+{
+    auto VPI = glm::inverse(m_P * m_V);
+    auto screenpos = glm::vec4(xy.x, -xy.y, 1.0f, 1.0f);
+    auto worldpos = VPI * screenpos;
+    return glm::normalize(glm::vec3(worldpos));
+}
+
 struct PerspectiveCamera : public Camera {
     PerspectiveCamera(float fov, float znear, float zfar)
       : m_fov(fov), m_znear(znear), m_zfar(zfar)

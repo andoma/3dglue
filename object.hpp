@@ -68,8 +68,8 @@ struct Object : public std::enable_shared_from_this<Object> {
         m_model_matrix = glm::scale(glm::mat4{1}, {scale, scale, scale});
     }
 
-    virtual bool uiInput(const Hit &hit, Control c, const glm::vec2 &xy,
-                         const Camera &cam)
+    virtual bool uiInput(const Hit &hit, Control c, const glm::vec2 &delta,
+                         const Camera &cam, const glm::vec2 &xy)
     {
         return false;
     }

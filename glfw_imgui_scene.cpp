@@ -39,7 +39,7 @@ struct GLFWImguiScene : public Scene {
 
     glm::vec2 normalizedCursor();
 
-    void drag(Control c, const glm::vec2 &xy, Grab &g);
+    void drag(Control c, const glm::vec2 &delta, Grab &g, const glm::vec2 &xy);
 
     GLFWwindow *m_window;
     unsigned int m_width;
@@ -81,18 +81,17 @@ struct GLFWImguiScene : public Scene {
     std::shared_ptr<Object> m_p2_crosshair;
 };
 
-
-void Grab::press(Scene &s, Control sense)
+void
+Grab::press(Scene &s, Control sense)
 {
     if(s.m_hit.object &&
-       s.m_hit.object->uiInput(s.m_hit, sense, {}, *s.m_camera)) {
+       s.m_hit.object->uiInput(s.m_hit, sense, {}, *s.m_camera, {})) {
         m_hit = s.m_hit;
     } else {
         m_hit.object = nullptr;
     }
     m_on = true;
 }
-
 
 void
 GLFWImguiScene::save_frame(void)
@@ -309,14 +308,15 @@ GLFWImguiScene::~GLFWImguiScene()
 }
 
 void
-GLFWImguiScene::drag(Control c, const glm::vec2 &xy, Grab &g)
+GLFWImguiScene::drag(Control c, const glm::vec2 &delta, Grab &g,
+                     const glm::vec2 &xy)
 {
     static int cnt;
     if(g.m_hit.object) {
-        g.m_hit.object->uiInput(g.m_hit, c, xy, *m_camera);
+        g.m_hit.object->uiInput(g.m_hit, c, delta, *m_camera, xy);
         return;
     }
-    m_camera->uiInput(c, xy);
+    m_camera->uiInput(c, delta);
 }
 
 bool
@@ -346,35 +346,33 @@ GLFWImguiScene::prepare()
     if(m_camera != NULL) {
         m_camera->update(m_width * m_scene_editor_start, m_height);
 
-        auto origin = glm::vec3(m_camera->m_VI[3]);
-        auto VPI = glm::inverse(m_camera->m_P * m_camera->m_V);
-        auto screenpos = glm::vec4(cursor.x, -cursor.y, 1.0f, 1.0f);
-        auto worldpos = VPI * screenpos;
-        auto dir = glm::normalize(glm::vec3(worldpos));
-
         if(!m_left_grab.m_on && !m_right_grab.m_on) {
             m_hit.distance = INFINITY;
             m_hit.object = nullptr;
+
+            auto origin = m_camera->origin();
+            auto direction = m_camera->direction(cursor);
+
             for(auto &o : m_objects) {
                 if(o->m_visible) {
-                    o->hit(origin, dir, glm::mat4{1}, m_hit);
+                    o->hit(origin, direction, glm::mat4{1}, m_hit);
                 }
             }
         }
 
         if(m_left_grab.m_on) {
             if(m_ctrl_down) {
-                drag(Control::DRAG3, cursor_delta, m_left_grab);
+                drag(Control::DRAG3, cursor_delta, m_left_grab, cursor);
             } else if(m_shift_down) {
-                drag(Control::DRAG2, cursor_delta, m_left_grab);
+                drag(Control::DRAG2, cursor_delta, m_left_grab, cursor);
             } else {
-                drag(Control::DRAG1, cursor_delta, m_left_grab);
+                drag(Control::DRAG1, cursor_delta, m_left_grab, cursor);
             }
         } else if(m_right_grab.m_on) {
             if(m_shift_down) {
-                drag(Control::DRAG4, cursor_delta, m_right_grab);
+                drag(Control::DRAG4, cursor_delta, m_right_grab, cursor);
             } else {
-                drag(Control::DRAG3, cursor_delta, m_right_grab);
+                drag(Control::DRAG3, cursor_delta, m_right_grab, cursor);
             }
         }
 

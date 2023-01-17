@@ -33,6 +33,8 @@ struct Camera {
 
     virtual void lookat(const glm::vec3 &v){};
 
+    glm::vec3 direction(const glm::vec2 &xy) const;
+
     float m_fov{45};
 
     glm::mat4 m_P{1};  // Projection
