@@ -19,9 +19,9 @@ struct Grab {
     bool m_on{false};
     Hit m_hit;
 
-    void release() { m_on = false;}
+    void press(Scene &s, Control ctrl, const glm::vec2 &xy);
 
-    void press(Scene &s, Control sense);
+    void release(Scene &s, Control ctrl, const glm::vec2 &xy);
 };
 
 struct GLFWImguiScene : public Scene {
@@ -82,15 +82,24 @@ struct GLFWImguiScene : public Scene {
 };
 
 void
-Grab::press(Scene &s, Control sense)
+Grab::press(Scene &s, Control ctrl, const glm::vec2 &xy)
 {
     if(s.m_hit.object &&
-       s.m_hit.object->uiInput(s.m_hit, sense, {}, *s.m_camera, {})) {
+       s.m_hit.object->uiInput(s.m_hit, ctrl, {}, *s.m_camera, xy)) {
         m_hit = s.m_hit;
+        printf("hit\n");
     } else {
         m_hit.object = nullptr;
     }
     m_on = true;
+}
+
+void
+Grab::release(Scene &s, Control ctrl, const glm::vec2 &xy)
+{
+    if(m_hit.object)
+        m_hit.object->uiInput(m_hit, ctrl, {}, *s.m_camera, xy);
+    m_on = false;
 }
 
 void
@@ -135,21 +144,22 @@ MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
         if(s->m_camera == NULL)
             return;
 
+        auto xy = s->normalizedCursor();
+
         if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
             if(s->m_alt_down) {
                 s->mark();
             }
-            s->m_left_grab.press(*s, Control::LEFT_SENSE);
+            s->m_left_grab.press(*s, Control::ROTATE_START, xy);
         }
         if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-            s->m_left_grab.release();
+            s->m_left_grab.release(*s, Control::ROTATE_END, xy);
         }
         if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-            s->m_right_grab.press(*s, Control::RIGHT_SENSE);
+            s->m_right_grab.press(*s, Control::TRANSLATE_START, xy);
         }
         if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
-            s->m_right_grab.release();
-
+            s->m_right_grab.release(*s, Control::TRANSLATE_END, xy);
         }
         return;
     }
@@ -166,7 +176,7 @@ ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
         if(s->m_camera == NULL)
             return;
         float scale = s->m_shift_down ? 0.1f : 1.0f;
-        s->m_camera->uiInput(Control::SCROLL,
+        s->m_camera->uiInput(Control::ZOOM,
                              glm::vec2{-xoffset, yoffset} * scale);
         return;
     }
@@ -192,7 +202,7 @@ KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 
     if(s->m_camera != NULL) {
         float theta = 0.5f;
-        Control c = s->m_shift_down ? Control::DRAG2 : Control::DRAG1;
+        Control c = s->m_shift_down ? Control::ROTATE2 : Control::ROTATE1;
         if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
             s->m_camera->uiInput(c, {-theta, 0});
         } else if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
@@ -361,18 +371,16 @@ GLFWImguiScene::prepare()
         }
 
         if(m_left_grab.m_on) {
-            if(m_ctrl_down) {
-                drag(Control::DRAG3, cursor_delta, m_left_grab, cursor);
-            } else if(m_shift_down) {
-                drag(Control::DRAG2, cursor_delta, m_left_grab, cursor);
+            if(m_shift_down) {
+                drag(Control::ROTATE2, cursor_delta, m_left_grab, cursor);
             } else {
-                drag(Control::DRAG1, cursor_delta, m_left_grab, cursor);
+                drag(Control::ROTATE1, cursor_delta, m_left_grab, cursor);
             }
         } else if(m_right_grab.m_on) {
             if(m_shift_down) {
-                drag(Control::DRAG4, cursor_delta, m_right_grab, cursor);
+                drag(Control::TRANSLATE2, cursor_delta, m_right_grab, cursor);
             } else {
-                drag(Control::DRAG3, cursor_delta, m_right_grab, cursor);
+                drag(Control::TRANSLATE1, cursor_delta, m_right_grab, cursor);
             }
         }
 

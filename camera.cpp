@@ -168,9 +168,7 @@ struct ArcBallCamera : public PerspectiveCamera {
         default:
             break;
 
-        case Control::SCROLL:
-            m_rotation *=
-                glm::angleAxis(glm::radians(xy.x), glm::vec3(0.f, 1.0f, 0.f));
+        case Control::ZOOM:
             if(xy.y < 0) {
                 m_distance *= powf(1.1, -xy.y);
             } else {
@@ -178,7 +176,7 @@ struct ArcBallCamera : public PerspectiveCamera {
             }
             break;
 
-        case Control::DRAG1:
+        case Control::ROTATE1:
             q = glm::angleAxis(glm::radians(xy.x * -90),
                                glm::vec3(0.f, 1.0f, 0.f));
 
@@ -188,7 +186,7 @@ struct ArcBallCamera : public PerspectiveCamera {
             m_rotation *= q;
             break;
 
-        case Control::DRAG2:
+        case Control::ROTATE2:
             q = glm::angleAxis(glm::radians(xy.x * -90),
                                glm::vec3(0.f, 0.0f, 1.f));
 
@@ -197,13 +195,13 @@ struct ArcBallCamera : public PerspectiveCamera {
             m_rotation *= q;
             break;
 
-        case Control::DRAG3:
+        case Control::TRANSLATE1:
             m_lookat +=
                 glm::vec3(glm::mat3_cast(m_rotation) *
                           glm::vec3{-m_distance * xy.x, m_distance * xy.y, 0});
             break;
 
-        case Control::DRAG4:
+        case Control::TRANSLATE2:
             m_lookat +=
                 glm::vec3(glm::mat3_cast(m_rotation) *
                           glm::vec3{-m_distance * xy.x, 0, m_distance * xy.y});

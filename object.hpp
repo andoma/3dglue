@@ -25,13 +25,18 @@ struct Hit {
 };
 
 enum class Control {
-    DRAG1,
-    DRAG2,
-    DRAG3,
-    DRAG4,
-    SCROLL,
-    LEFT_SENSE,
-    RIGHT_SENSE,
+
+    ROTATE_START,
+    ROTATE1,
+    ROTATE2,
+    ROTATE_END,
+
+    TRANSLATE_START,
+    TRANSLATE1,
+    TRANSLATE2,
+    TRANSLATE_END,
+
+    ZOOM,
 };
 
 struct Object : public std::enable_shared_from_this<Object> {
