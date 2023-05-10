@@ -45,7 +45,6 @@ struct Lines : public Object {
           const std::shared_ptr<std::vector<glm::ivec2>> &ib)
       : m_mode(mode), m_vb(vb), m_ib(ib)
     {
-        m_name = "Lines";
     }
 
     void draw(const Scene &scene, const Camera &cam,
