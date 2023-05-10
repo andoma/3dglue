@@ -321,7 +321,6 @@ void
 GLFWImguiScene::drag(Control c, const glm::vec2 &delta, Grab &g,
                      const glm::vec2 &xy)
 {
-    static int cnt;
     if(g.m_hit.object) {
         g.m_hit.object->uiInput(g.m_hit, c, delta, *m_camera, xy);
         return;
