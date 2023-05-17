@@ -110,4 +110,7 @@ std::shared_ptr<Object> makeLines(const std::shared_ptr<VertexBuffer> &vb,
 
 std::shared_ptr<Object> makeGroup(const char *name);
 
+std::pair<std::shared_ptr<VertexBuffer>, std::vector<glm::ivec3>> loadOBJ(
+    const char *path, const glm::mat4 transform = glm::mat4{1});
+
 }  // namespace g3d
