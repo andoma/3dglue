@@ -133,6 +133,7 @@ struct Mesh : public Object {
         }
 
         s->setFloat("normalColorize", m_normal_colorize);
+        s->setFloat("alpha", m_alpha);
 
         if(s->has_uniform("viewPos")) {
             s->setVec3("viewPos", glm::vec3{cam.m_VI[3]});
@@ -192,6 +193,7 @@ struct Mesh : public Object {
         ImGui::Checkbox("Backface culling", &m_backface_culling);
 
         ImGui::SliderFloat("Color", &m_colorize, 0, 1);
+        ImGui::SliderFloat("Alpha", &m_alpha, 0, 1);
 
         if(scene.m_lightpos) {
             ImGui::SliderFloat3("Ambient", &m_ambient[0], 0, 1);
@@ -258,6 +260,7 @@ struct Mesh : public Object {
     glm::vec3 m_diffuse{1};
 
     float m_colorize{1};
+    float m_alpha{1};
     float m_normal_colorize{0};
 
     bool m_wireframe{false};

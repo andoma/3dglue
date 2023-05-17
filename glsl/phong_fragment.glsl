@@ -14,6 +14,7 @@ uniform vec3 specularColor;
 uniform float specularStrength;
 
 uniform float normalColorize;
+uniform float alpha;
 
 uniform vec3 viewPos;
 
@@ -42,5 +43,5 @@ void main()
   vec3 ncol = vec3(0.5, 0.5, 0.5) * go_Normal + vec3(0.5, 0.5, 0.5);
   result = mix(result, ncol, normalColorize);
 
-  FragColor = vec4(result, 1.0);
+  FragColor = vec4(result, alpha);
 }
