@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <thread>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 #include "vertexbuffer.hpp"
 #include "bvh.hpp"
@@ -14,6 +16,37 @@
 #include "simd.hpp"
 
 namespace g3d {
+
+struct ThreadedIntersector : public Intersector {
+    std::thread m_thread;
+
+    bool m_run{true};
+    std::atomic<int> m_start{-1};
+
+    std::mutex m_mutex;
+    std::condition_variable m_cond;
+
+    ~ThreadedIntersector()
+    {
+        m_run = false;
+        m_thread.join();
+    }
+
+    void wait() override
+    {
+        std::unique_lock lock(m_mutex);
+        while(m_start.load() == -1) {
+            m_cond.wait(lock);
+        }
+    }
+
+    void init(int rootnode)
+    {
+        std::unique_lock lock(m_mutex);
+        m_start = rootnode;
+        m_cond.notify_all();
+    }
+};
 
 struct Ray {
     glm::vec3 origin;
@@ -175,19 +208,8 @@ public:
     std::shared_ptr<VertexBuffer> m_vb;
 };
 
-struct PointIntersector : public Intersector {
+struct PointIntersector : public ThreadedIntersector {
     BVH<Points> m_bvh;
-
-    std::thread m_thread;
-
-    bool m_run{true};
-    std::atomic<int> m_start{-1};
-
-    ~PointIntersector()
-    {
-        m_run = false;
-        m_thread.join();
-    }
 
     PointIntersector(const std::shared_ptr<VertexBuffer>& vb)
     {
@@ -201,7 +223,8 @@ struct PointIntersector : public Intersector {
             for(size_t i = 0; i < size; i++) {
                 primitives.push_back(i);
             }
-            m_start = m_bvh.build(primitives, 2, &m_run);
+
+            init(m_bvh.build(primitives, 2, &m_run));
         });
     }
 
@@ -286,19 +309,8 @@ public:
     std::shared_ptr<std::vector<glm::ivec3>> m_ib;
 };
 
-struct TriangleIntersector : public Intersector {
+struct TriangleIntersector : public ThreadedIntersector {
     BVH<Triangles> m_bvh;
-
-    std::thread m_thread;
-
-    bool m_run{true};
-    std::atomic<int> m_start{-1};
-
-    ~TriangleIntersector()
-    {
-        m_run = false;
-        m_thread.join();
-    }
 
     TriangleIntersector(const std::shared_ptr<VertexBuffer>& vb,
                         const std::shared_ptr<std::vector<glm::ivec3>>& ib)
@@ -314,7 +326,7 @@ struct TriangleIntersector : public Intersector {
             for(size_t i = 0; i < size; i++) {
                 primitives.push_back(i);
             }
-            m_start = m_bvh.build(primitives, 2, &m_run);
+            init(m_bvh.build(primitives, 2, &m_run));
         });
     }
 
@@ -333,8 +345,6 @@ struct TriangleIntersector : public Intersector {
         return std::make_pair(rec.index, m_bvh.point(rec.index, rec.bc));
     };
 };
-
-
 
 std::shared_ptr<Intersector>
 Intersector::make(const std::shared_ptr<VertexBuffer>& vb,
