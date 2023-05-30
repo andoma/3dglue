@@ -136,6 +136,13 @@ makeLine(const glm::vec3 segment[2])
 }
 
 std::shared_ptr<Object>
+makeLine(const glm::vec3 &p1, const glm::vec3 &p2)
+{
+    std::vector<glm::vec3> lines{p1, p2};
+    return makeLines(lines);
+}
+
+std::shared_ptr<Object>
 makeLineStrip(const std::vector<glm::vec3> &linestrip)
 {
     return std::make_shared<Lines>(GL_LINE_STRIP, VertexBuffer::make(linestrip),
