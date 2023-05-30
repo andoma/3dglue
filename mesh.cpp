@@ -149,7 +149,7 @@ struct Mesh : public Object {
 
         if(m_attrib_buf.get_elements(VertexAttribute::Color)) {
             glEnableVertexAttribArray(2);
-            m_attrib_buf.ptr(2, VertexAttribute::Normal);
+            m_attrib_buf.ptr(2, VertexAttribute::Color);
         }
 
         if(m_attrib_buf.get_elements(VertexAttribute::UV0)) {

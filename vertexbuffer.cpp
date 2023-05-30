@@ -23,6 +23,8 @@ struct VertexBufferCpu : public VertexBuffer {
         switch(va) {
         case VertexAttribute::Position:
             return (const float *)m_positions.data();
+        case VertexAttribute::Color:
+            return (const float *)m_colors.data();
         default:
             return nullptr;
         }
@@ -33,6 +35,8 @@ struct VertexBufferCpu : public VertexBuffer {
         switch(va) {
         case VertexAttribute::Position:
             return 3;
+        case VertexAttribute::Color:
+            return m_colors.size() ? 4 : 0;
         default:
             return 0;
         }
@@ -44,6 +48,7 @@ struct VertexBufferCpu : public VertexBuffer {
     }
 
     std::vector<glm::vec3> m_positions;
+    std::vector<glm::vec4> m_colors;
 };
 
 std::shared_ptr<VertexBuffer>
@@ -51,6 +56,16 @@ VertexBuffer::make(const std::vector<glm::vec3> &positions)
 {
     auto vbc = std::make_shared<VertexBufferCpu>();
     vbc->m_positions = positions;
+    return vbc;
+}
+
+std::shared_ptr<VertexBuffer>
+VertexBuffer::make(const std::vector<glm::vec3> &positions,
+                   const std::vector<glm::vec4> &colors)
+{
+    auto vbc = std::make_shared<VertexBufferCpu>();
+    vbc->m_positions = positions;
+    vbc->m_colors = colors;
     return vbc;
 }
 

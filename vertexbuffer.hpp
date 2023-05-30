@@ -27,6 +27,10 @@ struct VertexBuffer {
 
     static std::shared_ptr<VertexBuffer> make(
         const std::vector<glm::vec3> &pos);
+
+    static std::shared_ptr<VertexBuffer> make(
+        const std::vector<glm::vec3> &positions,
+        const std::vector<glm::vec4> &colors);
 };
 
 }  // namespace g3d
