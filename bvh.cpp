@@ -103,11 +103,11 @@ public:
     {
         BvhNode bn;
         if(primitives.size() <= 2) {
-            bn.left = -this->push(primitives[0]);
+            bn.left = -this->push(primitives[0]) - 1;
             bn.left_box = this->aabb(primitives[0]);
 
             if(primitives.size() == 2) {
-                bn.right = -this->push(primitives[1]);
+                bn.right = -this->push(primitives[1]) - 1;
                 bn.right_box = this->aabb(primitives[1]);
             } else {
                 bn.right = bn.left;
@@ -146,7 +146,7 @@ public:
     {
         if(index < 0) {
             // Negative index, intersecting a primitive
-            this->hit_primitive(-index, ray, rec);
+            this->hit_primitive(-index - 1, ray, rec);
             return;
         }
 
