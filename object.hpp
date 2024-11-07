@@ -116,4 +116,7 @@ std::pair<std::shared_ptr<VertexBuffer>,
           std::shared_ptr<std::vector<glm::ivec3>>>
 loadOBJ(const char *path, const glm::mat4 transform = glm::mat4{1});
 
+std::shared_ptr<VertexBuffer> loadPCD(const char *path,
+                                      const glm::mat4 transform = glm::mat4{1});
+
 }  // namespace g3d

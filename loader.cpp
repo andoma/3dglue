@@ -1,6 +1,7 @@
 #include <utility>
 #include <memory>
 #include <stdio.h>
+#include <string.h>
 #include <system_error>
 
 #include "vertexbuffer.hpp"
@@ -32,6 +33,61 @@ loadOBJ(const char *path, const glm::mat4 transform)
     }
     fclose(fp);
     return {VertexBuffer::make(vertices), triangles};
+}
+
+std::shared_ptr<VertexBuffer>
+loadPCD(const char *path, const glm::mat4 transform)
+{
+    FILE *fp = fopen(path, "r");
+    if(fp == NULL)
+        throw std::system_error(errno, std::system_category());
+
+    std::vector<glm::vec3> vertices;
+
+    char line[1024];
+
+    int height = -1;
+    int width = -1;
+    int points = -1;
+
+    while(1) {
+        if(fgets(line, sizeof(line), fp) == NULL)
+            throw std::runtime_error{"Premature end of file"};
+        if(line[0] == '#')
+            continue;
+        bool got_lf = false;
+        for(size_t i = 0; i < sizeof(line); i++) {
+            if(line[i] == '\n') {
+                line[i] = 0;
+                got_lf = true;
+            }
+        }
+        if(!got_lf) {
+            throw std::runtime_error{"Too long line"};
+        }
+
+        sscanf(line, "HEIGHT %u", &height);
+        sscanf(line, "WIDTH %u", &width);
+        sscanf(line, "POINTS %u", &points);
+
+        if(!strcmp(line, "DATA binary"))
+            break;
+    }
+    if(points < 1)
+        throw std::runtime_error{"Unknown/Bad number of points"};
+
+    vertices.resize(points);
+    size_t c = fread(vertices.data(), sizeof(glm::vec3), points, fp);
+    if(c != points) {
+        throw std::runtime_error{"Short read"};
+    }
+
+    fclose(fp);
+
+    for(size_t i = 0; i < vertices.size(); i++) {
+        vertices[i] = transform * glm::vec4{vertices[i], 1};
+    }
+    return VertexBuffer::make(vertices);
 }
 
 }  // namespace g3d
