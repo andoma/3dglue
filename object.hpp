@@ -117,6 +117,8 @@ std::pair<std::shared_ptr<VertexBuffer>,
 loadOBJ(const char *path, const glm::mat4 transform = glm::mat4{1});
 
 std::shared_ptr<VertexBuffer> loadPCD(const char *path,
-                                      const glm::mat4 transform = glm::mat4{1});
+                                      const glm::mat4 transform = glm::mat4{1},
+                                      glm::vec3 bbmin = {-INFINITY,-INFINITY,-INFINITY},
+                                      glm::vec3 bbmax = {INFINITY,INFINITY,INFINITY});
 
 }  // namespace g3d

@@ -36,7 +36,8 @@ loadOBJ(const char *path, const glm::mat4 transform)
 }
 
 std::shared_ptr<VertexBuffer>
-loadPCD(const char *path, const glm::mat4 transform)
+loadPCD(const char *path, const glm::mat4 transform,
+        glm::vec3 bbmin, glm::vec3 bbmax)
 {
     FILE *fp = fopen(path, "r");
     if(fp == NULL)
@@ -84,9 +85,20 @@ loadPCD(const char *path, const glm::mat4 transform)
 
     fclose(fp);
 
+    size_t j = 0;
     for(size_t i = 0; i < vertices.size(); i++) {
-        vertices[i] = transform * glm::vec4{vertices[i], 1};
+        auto p = transform * glm::vec4{vertices[i], 1};
+        if(p.x < bbmin.x ||
+           p.y < bbmin.y ||
+           p.z < bbmin.z ||
+           p.x > bbmax.x ||
+           p.y > bbmax.y ||
+           p.z > bbmax.z)
+            continue;
+        vertices[j++] = p;
     }
+
+    vertices.resize(j);
     return VertexBuffer::make(vertices);
 }
 
