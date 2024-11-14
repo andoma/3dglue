@@ -200,9 +200,7 @@ protected:
 public:
     inline glm::vec3 point(int primitive) const
     {
-        const float* pos = m_vb->get_attributes(VertexAttribute::Position);
-        pos += primitive * m_vb->get_stride(VertexAttribute::Position);
-        return glm::vec3{pos[0], pos[1], pos[2]};
+        return m_vb->position(primitive);
     }
 
     std::shared_ptr<VertexBuffer> m_vb;

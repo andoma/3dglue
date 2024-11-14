@@ -31,6 +31,14 @@ struct VertexBuffer {
     static std::shared_ptr<VertexBuffer> make(
         const std::vector<glm::vec3> &positions,
         const std::vector<glm::vec4> &colors);
+
+    glm::vec3 position(int index) const
+    {
+        const float* pos = get_attributes(VertexAttribute::Position);
+        pos += index * get_stride(VertexAttribute::Position);
+        return glm::vec3{pos[0], pos[1], pos[2]};
+    }
+
 };
 
 }  // namespace g3d
