@@ -57,6 +57,8 @@ VertexAttribBuffer::load(const VertexBuffer &src)
     } else {
         size_t offset = 0;
 
+        m_ose.clear();
+
         for(size_t i = 0; i < 32; i++) {
             const float *s = src.get_attributes((VertexAttribute)i);
             if(s == NULL) {
